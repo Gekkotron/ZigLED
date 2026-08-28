@@ -48,3 +48,32 @@ test "wipe eventually lights every pixel across a full period" {
     }
     for (lit) |b| try std.testing.expect(b);
 }
+
+test "sparkle lights some pixels at high intensity" {
+    var fb = fbm.FrameBuffer(cfg){};
+    var s = st_mod.defaults;
+    s.color_x = 65535; s.color_y = 21626; s.level = 255;
+    s.effect_id = 4; s.effect_intensity = 240;
+    ee.render(cfg, &s, 12345, &fb);
+    var lit: u32 = 0;
+    for (fb.linear) |p| if (p.r > 0 or p.g > 0 or p.b > 0) { lit += 1; };
+    try std.testing.expect(lit > 0);
+}
+
+test "rainbow different colors across strip" {
+    var fb = fbm.FrameBuffer(cfg){};
+    var s = st_mod.defaults;
+    s.level = 255; s.effect_id = 5;
+    ee.render(cfg, &s, 0, &fb);
+    try std.testing.expect(fb.linear[0].r != fb.linear[cfg.count / 2].r or fb.linear[0].g != fb.linear[cfg.count / 2].g);
+}
+
+test "candle never fully dark" {
+    var fb = fbm.FrameBuffer(cfg){};
+    var s = st_mod.defaults;
+    s.level = 255; s.effect_id = 6;
+    ee.render(cfg, &s, 0, &fb);
+    var lit: u32 = 0;
+    for (fb.linear) |p| if (p.r > 20 or p.g > 5) { lit += 1; };
+    try std.testing.expectEqual(cfg.count, lit);
+}
