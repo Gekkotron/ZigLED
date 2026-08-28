@@ -113,7 +113,7 @@ fn renderTask(_: ?*anyopaque) callconv(.c) void {
         g_pp.commissioned = commissioning.connected();
 
         if (g_state.effect_id == 0 and g_state.on) {
-            const target = color.xyToRgb(g_state.color_x, g_state.color_y, g_state.level);
+            const target = color.xyToRgb(g_state.color_x, g_state.color_y, 255);
             g_pp.beginFadeTo(target);
             g_pp.advanceFade(dt);
             g_fb.clear(g_pp.fade_current);
