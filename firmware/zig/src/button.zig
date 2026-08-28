@@ -4,7 +4,7 @@ const c = @cImport({
     @cInclude("esp_zigbee_core.h");
 });
 
-const config = @import("config.zig");
+const config = @import("config");
 
 var initialized: bool = false;
 

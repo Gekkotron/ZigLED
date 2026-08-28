@@ -2,12 +2,13 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 comptime {
-    _ = @import("config.zig");
+    _ = @import("config");
     _ = @import("zigbee_iface.zig");
     _ = @import("commissioning.zig");
     if (builtin.os.tag == .freestanding) {
         _ = @import("led_output.zig");
         _ = @import("button.zig");
+        _ = @import("tasks.zig");
     }
 }
 

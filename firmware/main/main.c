@@ -10,7 +10,7 @@ static const char *TAG = "ZIGLED_BOOT";
 void app_main(void) {
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_LOGI(TAG, "%s", zigled_greet());
-    zigled_led_output_init(2, 120);
+    zigled_start();
     zigled_zb_init();
     vTaskDelay(portMAX_DELAY);
 }

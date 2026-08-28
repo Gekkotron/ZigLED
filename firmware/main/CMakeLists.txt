@@ -1,7 +1,7 @@
 idf_component_register(
     SRCS "main.c" "esp_zb_endpoint.c"
     INCLUDE_DIRS "."
-    REQUIRES nvs_flash esp_driver_gpio esp_driver_rmt log espressif__led_strip espressif__esp-zigbee-lib espressif__esp-zboss-lib
+    REQUIRES nvs_flash esp_driver_gpio esp_driver_rmt esp_timer log espressif__led_strip espressif__esp-zigbee-lib espressif__esp-zboss-lib
 )
 
 if(NOT CMAKE_BUILD_EARLY_EXPANSION)
