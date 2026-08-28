@@ -32,6 +32,7 @@ var g_fb: frame_buffer.FrameBuffer(cfg) = .{};
 var g_pp: post_processing.PostProcessor(cfg) = .{};
 var g_debouncer: persistence.Debouncer = .{};
 var g_button_down_ms: u64 = 0;
+var g_reset_triggered: bool = false;
 
 fn loadStateFromNvs() void {
     var handle: led_output_c.nvs_handle_t = 0;
@@ -67,11 +68,11 @@ fn drainCommands() void {
             6 => .{ .set_intensity = @intCast(a & 0xFF) },
             7 => .{ .set_palette = @intCast(a & 0xFF) },
             8 => .{ .identify = @intCast(a & 0xFFFF) },
-            else => return,
+            else => continue,
         };
         const dirty = state.apply(&g_state, cmd);
         if (dirty) g_debouncer.markDirty(nowMs());
-        if (cmd == .identify) g_pp.identify_ms = cmd.identify * 1000;
+        if (cmd == .identify) g_pp.identify_ms = @as(u32, cmd.identify) * 1000;
     }
 }
 
@@ -83,13 +84,13 @@ fn checkButton() void {
     const now = nowMs();
     if (button.buttonPressed()) {
         if (g_button_down_ms == 0) g_button_down_ms = now;
-        if (now - g_button_down_ms >= 3000) {
+        if (now - g_button_down_ms >= 3000 and !g_reset_triggered) {
+            g_reset_triggered = true;
             g_fb.clear(.{ .r = 200 });
-            var buf: [cfg.count * 3]u8 = undefined;
+            var buf: [cfg.count * cfg.pixelStride()]u8 = undefined;
             g_pp.encode(&g_fb, &buf);
             zigled_led_output_push(&buf, buf.len);
             led_output_c.vTaskDelay(300);
-            _ = led_output_c.nvs_flash_erase_partition("nvs");
             button.factoryReset();
         }
     } else {
