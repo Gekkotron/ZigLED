@@ -31,6 +31,10 @@ pub fn build(b: *std.Build) void {
     const frame_buffer_mod = b.createModule(.{ .root_source_file = b.path("src/frame_buffer.zig") });
     frame_buffer_mod.addImport("color", color_mod);
     frame_buffer_mod.addImport("config", config_mod);
+    const post_processing_mod = b.createModule(.{ .root_source_file = b.path("src/post_processing.zig") });
+    post_processing_mod.addImport("color", color_mod);
+    post_processing_mod.addImport("config", config_mod);
+    post_processing_mod.addImport("frame_buffer", frame_buffer_mod);
 
     const TestSpec = struct {
         src: []const u8,
@@ -50,6 +54,12 @@ pub fn build(b: *std.Build) void {
             .{ .name = "color", .mod = color_mod },
             .{ .name = "config", .mod = config_mod },
             .{ .name = "frame_buffer", .mod = frame_buffer_mod },
+        } },
+        .{ .src = "tests/post_processing_test.zig", .imports = &.{
+            .{ .name = "color", .mod = color_mod },
+            .{ .name = "config", .mod = config_mod },
+            .{ .name = "frame_buffer", .mod = frame_buffer_mod },
+            .{ .name = "post_processing", .mod = post_processing_mod },
         } },
     };
 
