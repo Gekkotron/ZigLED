@@ -1,0 +1,13 @@
+# ESP-IDF
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/dependencies.lock
+
+# Zig
+firmware/zig/zig-cache/
+firmware/zig/zig-out/
+firmware/zig/.zig-cache/
+
+# macOS
+.DS_Store
