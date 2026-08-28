@@ -27,6 +27,10 @@ pub fn build(b: *std.Build) void {
     const color_mod = b.createModule(.{ .root_source_file = b.path("src/color.zig") });
     const palette_mod = b.createModule(.{ .root_source_file = b.path("src/palette.zig") });
     palette_mod.addImport("color", color_mod);
+    const config_mod = b.createModule(.{ .root_source_file = b.path("src/config.zig") });
+    const frame_buffer_mod = b.createModule(.{ .root_source_file = b.path("src/frame_buffer.zig") });
+    frame_buffer_mod.addImport("color", color_mod);
+    frame_buffer_mod.addImport("config", config_mod);
 
     const TestSpec = struct {
         src: []const u8,
@@ -41,6 +45,11 @@ pub fn build(b: *std.Build) void {
         .{ .src = "tests/palette_test.zig", .imports = &.{
             .{ .name = "color", .mod = color_mod },
             .{ .name = "palette", .mod = palette_mod },
+        } },
+        .{ .src = "tests/frame_buffer_test.zig", .imports = &.{
+            .{ .name = "color", .mod = color_mod },
+            .{ .name = "config", .mod = config_mod },
+            .{ .name = "frame_buffer", .mod = frame_buffer_mod },
         } },
     };
 
