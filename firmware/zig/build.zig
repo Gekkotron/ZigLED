@@ -36,6 +36,8 @@ pub fn build(b: *std.Build) void {
     post_processing_mod.addImport("config", config_mod);
     post_processing_mod.addImport("frame_buffer", frame_buffer_mod);
     const state_mod = b.createModule(.{ .root_source_file = b.path("src/state.zig") });
+    const persistence_mod = b.createModule(.{ .root_source_file = b.path("src/persistence.zig") });
+    persistence_mod.addImport("state", state_mod);
     const effect_engine_mod = b.createModule(.{ .root_source_file = b.path("src/effect_engine.zig") });
     effect_engine_mod.addImport("color", color_mod);
     effect_engine_mod.addImport("config", config_mod);
@@ -82,6 +84,10 @@ pub fn build(b: *std.Build) void {
             .{ .name = "effect_engine", .mod = effect_engine_mod },
             .{ .name = "frame_buffer", .mod = frame_buffer_mod },
             .{ .name = "config", .mod = config_mod },
+            .{ .name = "state", .mod = state_mod },
+        } },
+        .{ .src = "tests/persistence_test.zig", .imports = &.{
+            .{ .name = "persistence", .mod = persistence_mod },
             .{ .name = "state", .mod = state_mod },
         } },
     };
