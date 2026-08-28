@@ -25,6 +25,8 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib);
 
     const color_mod = b.createModule(.{ .root_source_file = b.path("src/color.zig") });
+    const palette_mod = b.createModule(.{ .root_source_file = b.path("src/palette.zig") });
+    palette_mod.addImport("color", color_mod);
 
     const TestSpec = struct {
         src: []const u8,
@@ -35,6 +37,10 @@ pub fn build(b: *std.Build) void {
         .{ .src = "src/lib.zig" },
         .{ .src = "tests/color_test.zig", .imports = &.{
             .{ .name = "color", .mod = color_mod },
+        } },
+        .{ .src = "tests/palette_test.zig", .imports = &.{
+            .{ .name = "color", .mod = color_mod },
+            .{ .name = "palette", .mod = palette_mod },
         } },
     };
 
