@@ -5,7 +5,10 @@ comptime {
     _ = @import("config.zig");
     _ = @import("zigbee_iface.zig");
     _ = @import("commissioning.zig");
-    if (builtin.os.tag == .freestanding) _ = @import("led_output.zig");
+    if (builtin.os.tag == .freestanding) {
+        _ = @import("led_output.zig");
+        _ = @import("button.zig");
+    }
 }
 
 export fn zigled_greet() [*:0]const u8 {
