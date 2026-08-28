@@ -1,7 +1,7 @@
 idf_component_register(
     SRCS "main.c"
     INCLUDE_DIRS "."
-    REQUIRES nvs_flash esp_driver_gpio esp_driver_rmt log
+    REQUIRES nvs_flash esp_driver_gpio esp_driver_rmt log espressif__led_strip
 )
 
 if(NOT CMAKE_BUILD_EARLY_EXPANSION)
@@ -17,7 +17,7 @@ if(NOT CMAKE_BUILD_EARLY_EXPANSION)
 
     add_custom_command(
         OUTPUT ${ZIG_LIB}
-        COMMAND zig build --prefix ${ZIG_DIR}/zig-out
+        COMMAND zig build --prefix ${ZIG_DIR}/zig-out -Didf-build-dir=${CMAKE_BINARY_DIR}
         WORKING_DIRECTORY ${ZIG_DIR}
         DEPENDS ${ZIG_SRC}
         COMMENT "Building Zig library"
@@ -26,5 +26,22 @@ if(NOT CMAKE_BUILD_EARLY_EXPANSION)
     add_custom_target(zig_build DEPENDS ${ZIG_LIB})
 
     add_dependencies(${COMPONENT_LIB} zig_build)
-    target_link_libraries(${COMPONENT_LIB} PRIVATE ${ZIG_LIB})
+
+    # ${ZIG_LIB} is a plain file path, not a CMake target, so linking it in
+    # directly (as in Task 2-13) leaves it outside the REQUIRES dependency
+    # graph that ESP-IDF's own link-line generation walks (and repeats,
+    # since ESP-IDF's components can be mutually circular) to resolve
+    # cross-component symbols. That left led_strip's (and transitively
+    # esp_driver_rmt's) symbols undefined: nothing placed a copy of those
+    # archives late enough in the link for the Zig code's references into
+    # them to resolve. Wrapping the Zig archive in a real IMPORTED CMake
+    # target and declaring its actual dependency on `idf::espressif__led_strip`
+    # puts it on that same graph, so ESP-IDF's link-line generation carries
+    # it (and everything led_strip itself needs) along correctly.
+    add_library(zigled_lib STATIC IMPORTED)
+    set_target_properties(zigled_lib PROPERTIES IMPORTED_LOCATION ${ZIG_LIB})
+    add_dependencies(zigled_lib zig_build)
+    target_link_libraries(zigled_lib INTERFACE idf::espressif__led_strip)
+
+    target_link_libraries(${COMPONENT_LIB} PRIVATE zigled_lib)
 endif()

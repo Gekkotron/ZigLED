@@ -1,7 +1,9 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 comptime {
     _ = @import("config.zig");
+    if (builtin.os.tag == .freestanding) _ = @import("led_output.zig");
 }
 
 export fn zigled_greet() [*:0]const u8 {

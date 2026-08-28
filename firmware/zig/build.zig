@@ -16,6 +16,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    if (b.option([]const u8, "idf-build-dir", "ESP-IDF CMake build directory, for main.c's compile_commands.json flags")) |idf_build_dir| {
+        addEspIdfFlags(b, lib_mod, idf_build_dir);
+    }
+
     const lib = b.addLibrary(.{
         .linkage = .static,
         .name = "zigled",
@@ -103,5 +107,83 @@ pub fn build(b: *std.Build) void {
         const t = b.addTest(.{ .root_module = tm });
         const run = b.addRunArtifact(t);
         test_step.dependOn(&run.step);
+    }
+}
+
+fn addEspIdfFlags(b: *std.Build, mod: *std.Build.Module, idf_build_dir: []const u8) void {
+    const io = b.graph.io;
+    const compile_db_path = b.pathJoin(&.{ idf_build_dir, "compile_commands.json" });
+    const data = std.Io.Dir.cwd().readFileAlloc(io, compile_db_path, b.allocator, .limited(16 * 1024 * 1024)) catch |err| {
+        std.debug.print("addEspIdfFlags: could not read {s}: {t}\n", .{ compile_db_path, err });
+        return;
+    };
+
+    const parsed = std.json.parseFromSlice(std.json.Value, b.allocator, data, .{}) catch |err| {
+        std.debug.print("addEspIdfFlags: could not parse {s}: {t}\n", .{ compile_db_path, err });
+        return;
+    };
+
+    for (parsed.value.array.items) |entry| {
+        const file = entry.object.get("file").?.string;
+        if (!std.mem.endsWith(u8, file, "/main/main.c")) continue;
+
+        const command = entry.object.get("command").?.string;
+
+        // The toolchain's own libc (newlib) headers must come first in the
+        // search list: ESP-IDF's `newlib/platform_include` override headers
+        // use `#include_next<sys/reent.h>` to chain into the real one, and
+        // Zig 0.16's translate-c (the `aro` C frontend, not clang) only
+        // resolves that correctly when the real header is reachable ahead
+        // of the override in the list.
+        var first_tok = std.mem.tokenizeScalar(u8, command, ' ');
+        if (first_tok.next()) |compiler_path| addToolchainSysrootIncludes(b, mod, io, compiler_path);
+
+        var it = std.mem.tokenizeScalar(u8, command, ' ');
+        _ = it.next(); // skip compiler path, already handled above
+        while (it.next()) |tok| {
+            if (std.mem.startsWith(u8, tok, "-I")) {
+                const path = tok[2..];
+                if (path.len > 0) mod.addIncludePath(.{ .cwd_relative = path });
+            } else if (std.mem.startsWith(u8, tok, "-D") and std.mem.indexOfScalar(u8, tok, '\\') == null) {
+                const def = tok[2..];
+                if (std.mem.indexOfScalar(u8, def, '=')) |eq| {
+                    mod.addCMacro(def[0..eq], def[eq + 1 ..]);
+                } else if (def.len > 0) {
+                    mod.addCMacro(def, "1");
+                }
+            }
+        }
+        return;
+    }
+
+    std.debug.print("addEspIdfFlags: no main.c entry found in {s}\n", .{compile_db_path});
+}
+
+// riscv32-esp-elf-gcc's own libc (newlib) and built-in headers (stdio.h,
+// stdint.h, stdarg.h, ...) live in the toolchain's implicit search path,
+// which gcc never spells out as an explicit -I flag in compile_commands.json.
+// Ask the compiler itself where they are, so Zig's translate-c can resolve
+// the ESP-IDF headers' plain #include <stdio.h>-style system includes.
+fn addToolchainSysrootIncludes(b: *std.Build, mod: *std.Build.Module, io: std.Io, compiler_path: []const u8) void {
+    const result = std.process.run(b.allocator, io, .{
+        .argv = &.{ compiler_path, "-E", "-Wp,-v", "-xc", "-" },
+    }) catch |err| {
+        std.debug.print("addToolchainSysrootIncludes: could not run {s}: {t}\n", .{ compiler_path, err });
+        return;
+    };
+
+    var in_list = false;
+    var lines = std.mem.splitScalar(u8, result.stderr, '\n');
+    while (lines.next()) |line| {
+        if (std.mem.endsWith(u8, line, "search starts here:")) {
+            in_list = true;
+            continue;
+        }
+        if (std.mem.startsWith(u8, line, "End of search list")) break;
+        if (!in_list) continue;
+        const dir = std.mem.trim(u8, line, " \t");
+        if (dir.len == 0) continue;
+        const resolved = std.fs.path.resolve(b.allocator, &.{dir}) catch dir;
+        mod.addIncludePath(.{ .cwd_relative = resolved });
     }
 }
