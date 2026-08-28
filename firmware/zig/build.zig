@@ -40,6 +40,7 @@ pub fn build(b: *std.Build) void {
     post_processing_mod.addImport("config", config_mod);
     post_processing_mod.addImport("frame_buffer", frame_buffer_mod);
     const state_mod = b.createModule(.{ .root_source_file = b.path("src/state.zig") });
+    lib_mod.addImport("state", state_mod);
     const persistence_mod = b.createModule(.{ .root_source_file = b.path("src/persistence.zig") });
     persistence_mod.addImport("state", state_mod);
     const effect_engine_mod = b.createModule(.{ .root_source_file = b.path("src/effect_engine.zig") });
@@ -49,6 +50,8 @@ pub fn build(b: *std.Build) void {
     effect_engine_mod.addImport("state", state_mod);
     effect_engine_mod.addImport("palette", palette_mod);
     effect_engine_mod.addImport("effect_engine", effect_engine_mod);
+    const zigbee_iface_mod = b.createModule(.{ .root_source_file = b.path("src/zigbee_iface.zig") });
+    zigbee_iface_mod.addImport("state", state_mod);
 
     const TestSpec = struct {
         src: []const u8,
@@ -56,7 +59,9 @@ pub fn build(b: *std.Build) void {
     };
 
     const test_specs = [_]TestSpec{
-        .{ .src = "src/lib.zig" },
+        .{ .src = "src/lib.zig", .imports = &.{
+            .{ .name = "state", .mod = state_mod },
+        } },
         .{ .src = "tests/color_test.zig", .imports = &.{
             .{ .name = "color", .mod = color_mod },
         } },
@@ -92,6 +97,10 @@ pub fn build(b: *std.Build) void {
         } },
         .{ .src = "tests/persistence_test.zig", .imports = &.{
             .{ .name = "persistence", .mod = persistence_mod },
+            .{ .name = "state", .mod = state_mod },
+        } },
+        .{ .src = "tests/zigbee_iface_test.zig", .imports = &.{
+            .{ .name = "zigbee_iface", .mod = zigbee_iface_mod },
             .{ .name = "state", .mod = state_mod },
         } },
     };

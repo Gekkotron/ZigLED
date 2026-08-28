@@ -6,6 +6,7 @@
 #include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "zig_bindings.h"
 
 static const char *TAG = "ZIGLED_ZB";
 
@@ -16,6 +17,43 @@ static const char *TAG = "ZIGLED_ZB";
 static volatile bool s_connected = false;
 
 bool zigled_zb_connected(void) { return s_connected; }
+
+static esp_err_t esp_zb_action_handler(esp_zb_core_action_callback_id_t id, const void *msg) {
+    if (id != ESP_ZB_CORE_SET_ATTR_VALUE_CB_ID) return ESP_OK;
+    const esp_zb_zcl_set_attr_value_message_t *m = msg;
+    switch (m->info.cluster) {
+        case ESP_ZB_ZCL_CLUSTER_ID_ON_OFF:
+            if (m->attribute.id == ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID)
+                zigled_on_onoff(*(bool *)m->attribute.data.value);
+            break;
+        case ESP_ZB_ZCL_CLUSTER_ID_LEVEL_CONTROL:
+            if (m->attribute.id == ESP_ZB_ZCL_ATTR_LEVEL_CONTROL_CURRENT_LEVEL_ID)
+                zigled_on_level(*(uint8_t *)m->attribute.data.value);
+            break;
+        case ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL: {
+            static uint16_t last_x = 0, last_y = 0;
+            if (m->attribute.id == ESP_ZB_ZCL_ATTR_COLOR_CONTROL_CURRENT_X_ID)
+                last_x = *(uint16_t *)m->attribute.data.value;
+            else if (m->attribute.id == ESP_ZB_ZCL_ATTR_COLOR_CONTROL_CURRENT_Y_ID)
+                last_y = *(uint16_t *)m->attribute.data.value;
+            zigled_on_color_xy(last_x, last_y);
+            break;
+        }
+        case ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY:
+            if (m->attribute.id == ESP_ZB_ZCL_ATTR_IDENTIFY_IDENTIFY_TIME_ID)
+                zigled_on_identify(*(uint16_t *)m->attribute.data.value);
+            break;
+        case MFG_CLUSTER_ID:
+            switch (m->attribute.id) {
+                case 0x0000: zigled_on_mfg_effect(*(uint16_t *)m->attribute.data.value); break;
+                case 0x0001: zigled_on_mfg_speed(*(uint8_t *)m->attribute.data.value); break;
+                case 0x0002: zigled_on_mfg_intensity(*(uint8_t *)m->attribute.data.value); break;
+                case 0x0003: zigled_on_mfg_palette(*(uint8_t *)m->attribute.data.value); break;
+            }
+            break;
+    }
+    return ESP_OK;
+}
 
 static void esp_zb_task(void *pv) {
     esp_zb_cfg_t zb_cfg = {
@@ -39,6 +77,7 @@ static void esp_zb_task(void *pv) {
     esp_zb_device_register(ep_list);
 
     esp_zb_set_primary_network_channel_set(ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK);
+    esp_zb_core_action_handler_register(esp_zb_action_handler);
     ESP_ERROR_CHECK(esp_zb_start(false));
     esp_zb_stack_main_loop();
 }

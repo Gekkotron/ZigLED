@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 
 comptime {
     _ = @import("config.zig");
+    _ = @import("zigbee_iface.zig");
     if (builtin.os.tag == .freestanding) _ = @import("led_output.zig");
 }
 
