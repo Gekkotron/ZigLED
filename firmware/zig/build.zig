@@ -36,6 +36,13 @@ pub fn build(b: *std.Build) void {
     post_processing_mod.addImport("config", config_mod);
     post_processing_mod.addImport("frame_buffer", frame_buffer_mod);
     const state_mod = b.createModule(.{ .root_source_file = b.path("src/state.zig") });
+    const effect_engine_mod = b.createModule(.{ .root_source_file = b.path("src/effect_engine.zig") });
+    effect_engine_mod.addImport("color", color_mod);
+    effect_engine_mod.addImport("config", config_mod);
+    effect_engine_mod.addImport("frame_buffer", frame_buffer_mod);
+    effect_engine_mod.addImport("state", state_mod);
+    effect_engine_mod.addImport("palette", palette_mod);
+    effect_engine_mod.addImport("effect_engine", effect_engine_mod);
 
     const TestSpec = struct {
         src: []const u8,
@@ -63,6 +70,12 @@ pub fn build(b: *std.Build) void {
             .{ .name = "post_processing", .mod = post_processing_mod },
         } },
         .{ .src = "tests/state_test.zig", .imports = &.{
+            .{ .name = "state", .mod = state_mod },
+        } },
+        .{ .src = "tests/effect_engine_test.zig", .imports = &.{
+            .{ .name = "effect_engine", .mod = effect_engine_mod },
+            .{ .name = "frame_buffer", .mod = frame_buffer_mod },
+            .{ .name = "config", .mod = config_mod },
             .{ .name = "state", .mod = state_mod },
         } },
     };
