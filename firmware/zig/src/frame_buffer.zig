@@ -46,9 +46,9 @@ fn mapXY(comptime cfg: config.LedConfig, x: u16, y: u16) ?u32 {
                 if (x >= p.x_offset and x < p.x_offset + p.w and y >= p.y_offset and y < p.y_offset + p.h) {
                     const lx: u32 = x - p.x_offset;
                     const ly: u32 = y - p.y_offset;
-                    break :blk total + ly * p.w + lx;
+                    break :blk total + ly * @as(u32, p.w) + lx;
                 }
-                total += @as(u32, p.w) * p.h;
+                total += @as(u32, p.w) * @as(u32, p.h);
             }
             break :blk null;
         },
