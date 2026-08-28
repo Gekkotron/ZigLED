@@ -24,15 +24,30 @@ pub fn build(b: *std.Build) void {
     lib.bundle_compiler_rt = true;
     b.installArtifact(lib);
 
-    const test_mod = b.createModule(.{
-        .root_source_file = b.path("src/lib.zig"),
-        .target = b.graph.host,
-        .optimize = .Debug,
-    });
+    const color_mod = b.createModule(.{ .root_source_file = b.path("src/color.zig") });
 
-    const host_tests = b.addTest(.{
-        .root_module = test_mod,
-    });
-    const run_tests = b.addRunArtifact(host_tests);
-    b.step("test", "Run host unit tests").dependOn(&run_tests.step);
+    const TestSpec = struct {
+        src: []const u8,
+        imports: []const struct { name: []const u8, mod: *std.Build.Module } = &.{},
+    };
+
+    const test_specs = [_]TestSpec{
+        .{ .src = "src/lib.zig" },
+        .{ .src = "tests/color_test.zig", .imports = &.{
+            .{ .name = "color", .mod = color_mod },
+        } },
+    };
+
+    const test_step = b.step("test", "Run host unit tests");
+    for (test_specs) |spec| {
+        const tm = b.createModule(.{
+            .root_source_file = b.path(spec.src),
+            .target = b.graph.host,
+            .optimize = .Debug,
+        });
+        for (spec.imports) |imp| tm.addImport(imp.name, imp.mod);
+        const t = b.addTest(.{ .root_module = tm });
+        const run = b.addRunArtifact(t);
+        test_step.dependOn(&run.step);
+    }
 }
