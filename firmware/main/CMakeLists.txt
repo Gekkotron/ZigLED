@@ -8,10 +8,18 @@ if(NOT CMAKE_BUILD_EARLY_EXPANSION)
     set(ZIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../zig)
     set(ZIG_LIB ${ZIG_DIR}/zig-out/lib/libzigled.a)
 
+    file(GLOB_RECURSE ZIG_SRC CONFIGURE_DEPENDS
+        "${ZIG_DIR}/build.zig"
+        "${ZIG_DIR}/build.zig.zon"
+        "${ZIG_DIR}/src/*.zig"
+        "${ZIG_DIR}/tests/*.zig"
+    )
+
     add_custom_command(
         OUTPUT ${ZIG_LIB}
         COMMAND zig build --prefix ${ZIG_DIR}/zig-out
         WORKING_DIRECTORY ${ZIG_DIR}
+        DEPENDS ${ZIG_SRC}
         COMMENT "Building Zig library"
         VERBATIM
     )
