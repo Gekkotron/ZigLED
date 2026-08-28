@@ -26,7 +26,7 @@ pub fn make(comptime cfg: config.LedConfig) ee.Effect(cfg) {
                     const noise: i32 = @intFromFloat(std.math.sin(@as(f32, @floatFromInt(px)) * 0.4 + @as(f32, @floatFromInt(phase)) / 4000.0) * 128.0);
                     const noise2: i32 = @intFromFloat(std.math.sin(@as(f32, @floatFromInt(py)) * 0.4 - @as(f32, @floatFromInt(phase)) / 3000.0) * 128.0);
                     const t: u16 = @intCast(@as(u32, @intCast(@abs(noise + noise2))) * 128);
-                    const commanded = c.xyToRgb(state.color_x, state.color_y, state.level);
+                    const commanded = c.xyToRgb(state.color_x, state.color_y, 255);
                     fb.setXY(x, y, palette.sample(state.palette_id, t, commanded));
                 }
             }

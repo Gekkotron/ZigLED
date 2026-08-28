@@ -178,14 +178,16 @@ Registered in this order (`EffectId` value in parens):
 | 0 | `solid` | any | Renders `ColorControl.xy` → linear RGB (via CIE-1931 xy→RGB matrix). Special-cased in post-processing to route through the fade blender. |
 | 1 | `breathe` | any | Sine amplitude on commanded color or palette-sampled color. |
 | 2 | `comet` | any | Bright head + fading tail traveling along the linear index. Palette-aware. |
-| 3 | `sparkle` | any | Random per-pixel twinkles; density scaled by `EffectIntensity`, decay by `EffectSpeed`. |
-| 4 | `wipe` | any | Forward fill, then forward clear, repeating. Direction reversal by `EffectIntensity > 128`. |
-| 5 | `fire_1d` | strip | 5 zoned flame simulations (from the Arduino prototype's insight — single long flame reads as a gradient). Pinned to a bespoke `fire` palette; `PaletteId` ignored. |
-| 6 | `plasma_2d` | matrix | Perlin-noise driven color field on the matrix grid. Palette-driven. Excluded from strip builds via `layout_kinds`. |
-| 7 | `rainbow` | any | Palette-scroll effect with the `rainbow` palette forced. Equivalent to `comet` with palette=rainbow and different sampling, but shipped as its own effect for HA UX clarity. |
-| 8 | `candle` | any | Perlin-noise slow warm flicker. From the Arduino prototype — deep-red-through-amber, saturation pinned, never fully dark. |
+| 3 | `wipe` | any | Forward fill, then forward clear, repeating. Direction reversal by `EffectIntensity > 128`. |
+| 4 | `sparkle` | any | Random per-pixel twinkles; density scaled by `EffectIntensity`, decay by `EffectSpeed`. |
+| 5 | `rainbow` | any | Palette-scroll effect with the `rainbow` palette forced. Equivalent to `comet` with palette=rainbow and different sampling, but shipped as its own effect for HA UX clarity. |
+| 6 | `candle` | any | Perlin-noise slow warm flicker. From the Arduino prototype — deep-red-through-amber, saturation pinned, never fully dark. |
+| 7 | `fire_1d` | strip | 5 zoned flame simulations (from the Arduino prototype's insight — single long flame reads as a gradient). Pinned to a bespoke `fire` palette; `PaletteId` ignored. |
+| 8 | `plasma_2d` | matrix | Perlin-noise driven color field on the matrix grid. Palette-driven. Excluded from strip builds via `layout_kinds`. |
 
 Append-only means: new effects land at ids 9, 10, … . Existing ids are never reused for a different effect.
+
+**Deviation from an earlier draft.** An earlier draft ordered these differently (sparkle=3, wipe=4, fire_1d=5, plasma_2d=6, rainbow=7, candle=8). Ordering was updated to match the shipped registration table in `effect_engine.zig`; the Z2M converter agrees with the shipped order. Recorded in `.superpowers/sdd/2026-08-28-zigled/progress.md`.
 
 ## 7. Persistence, boot, error handling
 
@@ -253,6 +255,8 @@ Three layers.
 No hardware; runs on macOS.
 
 - `effect_engine`: render each effect at a fixed timestamp into a stub buffer, compare against golden `.bin` files. Catches accidental visual regressions when tweaking gamma / effect internals.
+
+**V1 deviation from golden-frame testing.** The v1 host tests use behavior asserts (e.g. "some pixels lit", "at least half the pixels warm", "brightness changes across time") instead of golden `.bin` comparisons. Rationale: three effects (`candle`, `sparkle`, `fire_1d`) are RNG-driven and would produce brittle goldens under any change to Zig's stdlib PRNG or seeding; behavior asserts caught real defects during implementation (e.g. Task 6's `.panels` compile bug via a mapping test). Deterministic effects (`solid`, `rainbow`, `wipe` at fixed t) COULD grow golden coverage as a post-v1 hardening step. Deviation recorded in `.superpowers/sdd/2026-08-28-zigled/progress.md`.
 - `frame_buffer`: layout mapping for strip, serpentine 8×8, dual 16×16 panels. Set `(x,y)`, assert linear index.
 - `post_processing`: brightness × gamma × RGBW split — table-driven, ~30 rows.
 - `state`: apply a scripted sequence of `Command`s, assert final `state`. Exercises clamping and mode transitions.

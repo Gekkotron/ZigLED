@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.c" "esp_zb_endpoint.c"
+    SRCS "main.c" "esp_zb_endpoint.c" "lock_shim.c"
     INCLUDE_DIRS "."
     REQUIRES nvs_flash esp_driver_gpio esp_driver_rmt esp_timer log espressif__led_strip espressif__esp-zigbee-lib espressif__esp-zboss-lib
 )
@@ -44,4 +44,17 @@ if(NOT CMAKE_BUILD_EARLY_EXPANSION)
     target_link_libraries(zigled_lib INTERFACE idf::espressif__led_strip)
 
     target_link_libraries(${COMPONENT_LIB} PRIVATE zigled_lib)
+
+    # zigbee_iface.zig's CommandQueue lock calls into lock_shim.c's
+    # zigled_queue_lock/unlock, which live in this same `main` component's
+    # own archive (libmain.a). Since libmain.a is placed on the link line
+    # before zigled_lib (the PRIVATE dependency added above), and nothing
+    # in libmain.a is referenced yet at the point the linker first scans
+    # it, lock_shim.c's object is never pulled from the archive and the
+    # symbols come up undefined when zigled_lib is processed afterward.
+    # Declaring the reverse edge here — same pattern as the led_strip
+    # dependency above — puts `main` and `zigled_lib` in a cycle that
+    # ESP-IDF's link-line generation repeats on the link line, so the
+    # second pass resolves it.
+    target_link_libraries(zigled_lib INTERFACE idf::main)
 endif()

@@ -1,7 +1,26 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const s = @import("state");
 
 const CAP: usize = 32;
+
+// tryPost/tryDrain run from two different FreeRTOS tasks (Zigbee task
+// producer, render task consumer) on-device, so their shared-state mutation
+// needs mutual exclusion. The lock itself is a small C shim (see
+// firmware/main/lock_shim.c) rather than a `@cImport` of FreeRTOS headers
+// here, since this file is also compiled as a standalone host-test module
+// with no ESP-IDF include paths; the calls below are pruned entirely on
+// that (non-freestanding) target.
+extern fn zigled_queue_lock() void;
+extern fn zigled_queue_unlock() void;
+
+fn lock() void {
+    if (builtin.os.tag == .freestanding) zigled_queue_lock();
+}
+
+fn unlock() void {
+    if (builtin.os.tag == .freestanding) zigled_queue_unlock();
+}
 
 pub const CommandQueue = struct {
     buf: [CAP]s.Command = undefined,
@@ -14,6 +33,8 @@ pub const CommandQueue = struct {
     }
 
     pub fn tryPost(self: *CommandQueue, cmd: s.Command) bool {
+        lock();
+        defer unlock();
         if (self.len == CAP) {
             self.head = (self.head + 1) % CAP;
             self.len -= 1;
@@ -25,6 +46,8 @@ pub const CommandQueue = struct {
     }
 
     pub fn tryDrain(self: *CommandQueue, out: *s.Command) bool {
+        lock();
+        defer unlock();
         if (self.len == 0) return false;
         out.* = self.buf[self.head];
         self.head = (self.head + 1) % CAP;

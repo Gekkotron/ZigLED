@@ -24,6 +24,15 @@ void zigled_on_identify(uint16_t seconds);
 bool zigled_next_command(uint8_t *out_tag, uint32_t *out_a, uint32_t *out_b);
 void zigled_zb_set_connected(bool v);
 
+bool     zigled_get_on(void);
+uint8_t  zigled_get_level(void);
+uint16_t zigled_get_color_x(void);
+uint16_t zigled_get_color_y(void);
+uint16_t zigled_get_effect_id(void);
+uint8_t  zigled_get_effect_speed(void);
+uint8_t  zigled_get_effect_intensity(void);
+uint8_t  zigled_get_palette_id(void);
+
 #ifdef __cplusplus
 }
 #endif

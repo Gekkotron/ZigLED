@@ -16,7 +16,7 @@ pub fn make(comptime cfg: config.LedConfig) ee.Effect(cfg) {
                 p.g = if (p.g > decay) p.g - decay else 0;
                 p.b = if (p.b > decay) p.b - decay else 0;
             }
-            const commanded = c.xyToRgb(state.color_x, state.color_y, state.level);
+            const commanded = c.xyToRgb(state.color_x, state.color_y, 255);
             const col = palette.sample(state.palette_id, @intCast((t_ms / 4) % 65536), commanded);
             var prng = std.Random.DefaultPrng.init(t_ms);
             const rng = prng.random();

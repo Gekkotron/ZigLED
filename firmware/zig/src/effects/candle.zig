@@ -9,7 +9,6 @@ pub fn make(comptime cfg: config.LedConfig) ee.Effect(cfg) {
     const R = struct {
         fn render(state: *const st.EngineState, t_ms: u64, fb: *fbm.FrameBuffer(cfg)) void {
             if (!state.on) { fb.clear(.{}); return; }
-            const level = state.level;
             var prng = std.Random.DefaultPrng.init(0x1eaf00ffee ^ (t_ms / 30));
             const rng = prng.random();
             for (&fb.linear, 0..) |*p, i| {
@@ -19,8 +18,8 @@ pub fn make(comptime cfg: config.LedConfig) ee.Effect(cfg) {
                 const bright: u16 = 110 + (@as(u16, noise) * 145) / 255;
                 const hue_shift: u8 = @intCast(rng.uintLessThan(u16, 24));
                 p.* = .{
-                    .r = @intCast((@as(u32, 255) * bright * level) / 65025),
-                    .g = @intCast((@as(u32, 40 + hue_shift) * bright * level) / 65025),
+                    .r = @intCast((@as(u32, 255) * bright) / 255),
+                    .g = @intCast((@as(u32, 40 + hue_shift) * bright) / 255),
                     .b = 0,
                 };
             }

@@ -54,12 +54,6 @@ pub fn make(comptime cfg: config.LedConfig) ee.Effect(cfg) {
                 const h = heat[i];
                 p.* = fire_pal.sample(@as(u16, h) * 257);
             }
-            const level = state.level;
-            for (&fb.linear) |*p| {
-                p.r = @intCast((@as(u16, p.r) * level + 127) / 255);
-                p.g = @intCast((@as(u16, p.g) * level + 127) / 255);
-                p.b = @intCast((@as(u16, p.b) * level + 127) / 255);
-            }
         }
     };
     return .{ .name = "fire_1d", .layouts = .{ .strip = true }, .render = R.render };

@@ -55,6 +55,100 @@ static esp_err_t esp_zb_action_handler(esp_zb_core_action_callback_id_t id, cons
     return ESP_OK;
 }
 
+static void register_mfg_cluster(esp_zb_cluster_list_t *cluster_list) {
+    esp_zb_attribute_list_t *mfg_attr_list = esp_zb_zcl_attr_list_create(MFG_CLUSTER_ID);
+
+    static uint16_t effect_id_default = 0;
+    static uint8_t  effect_speed_default = 128;
+    static uint8_t  effect_intensity_default = 128;
+    static uint8_t  palette_id_default = 0;
+    static uint16_t effect_count_default = 8;   // strip build filters plasma_2d out
+    static uint16_t pixel_count_default = 120;
+    static uint8_t  layout_kind_default = 0;    // strip
+    static uint16_t layout_width_default = 0;
+    static uint16_t layout_height_default = 0;
+
+    esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0000,
+        ESP_ZB_ZCL_ATTR_TYPE_U16,
+        ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &effect_id_default);
+    esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0001,
+        ESP_ZB_ZCL_ATTR_TYPE_U8,
+        ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &effect_speed_default);
+    esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0002,
+        ESP_ZB_ZCL_ATTR_TYPE_U8,
+        ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &effect_intensity_default);
+    esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0003,
+        ESP_ZB_ZCL_ATTR_TYPE_U8,
+        ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &palette_id_default);
+    esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0004,
+        ESP_ZB_ZCL_ATTR_TYPE_U16, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
+        &effect_count_default);
+    esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0006,
+        ESP_ZB_ZCL_ATTR_TYPE_U16, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
+        &pixel_count_default);
+    esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0007,
+        ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
+        &layout_kind_default);
+    esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0008,
+        ESP_ZB_ZCL_ATTR_TYPE_U16, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
+        &layout_width_default);
+    esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0009,
+        ESP_ZB_ZCL_ATTR_TYPE_U16, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
+        &layout_height_default);
+
+    esp_zb_cluster_list_add_custom_cluster(cluster_list, mfg_attr_list,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+}
+
+static void override_basic_identity(esp_zb_cluster_list_t *cluster_list) {
+    esp_zb_attribute_list_t *basic_cluster = esp_zb_cluster_list_get_cluster(
+        cluster_list, ESP_ZB_ZCL_CLUSTER_ID_BASIC, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+    esp_zb_cluster_update_attr(basic_cluster,
+        ESP_ZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID,
+        (void *)"\x09Gekkotron");
+    esp_zb_cluster_update_attr(basic_cluster,
+        ESP_ZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID,
+        (void *)"\x08ZigLED-1");
+}
+
+static void sync_attrs_from_nvs(void) {
+    bool on = zigled_get_on();
+    uint8_t level = zigled_get_level();
+    uint16_t x = zigled_get_color_x();
+    uint16_t y = zigled_get_color_y();
+    uint16_t eff = zigled_get_effect_id();
+    uint8_t spd = zigled_get_effect_speed();
+    uint8_t ins = zigled_get_effect_intensity();
+    uint8_t pal = zigled_get_palette_id();
+
+    esp_zb_lock_acquire(portMAX_DELAY);
+    esp_zb_zcl_set_attribute_val(EP_ID, ESP_ZB_ZCL_CLUSTER_ID_ON_OFF,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID, &on, false);
+    esp_zb_zcl_set_attribute_val(EP_ID, ESP_ZB_ZCL_CLUSTER_ID_LEVEL_CONTROL,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ESP_ZB_ZCL_ATTR_LEVEL_CONTROL_CURRENT_LEVEL_ID, &level, false);
+    esp_zb_zcl_set_attribute_val(EP_ID, ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ESP_ZB_ZCL_ATTR_COLOR_CONTROL_CURRENT_X_ID, &x, false);
+    esp_zb_zcl_set_attribute_val(EP_ID, ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ESP_ZB_ZCL_ATTR_COLOR_CONTROL_CURRENT_Y_ID, &y, false);
+    esp_zb_zcl_set_attribute_val(EP_ID, MFG_CLUSTER_ID,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 0x0000, &eff, false);
+    esp_zb_zcl_set_attribute_val(EP_ID, MFG_CLUSTER_ID,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 0x0001, &spd, false);
+    esp_zb_zcl_set_attribute_val(EP_ID, MFG_CLUSTER_ID,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 0x0002, &ins, false);
+    esp_zb_zcl_set_attribute_val(EP_ID, MFG_CLUSTER_ID,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 0x0003, &pal, false);
+    esp_zb_lock_release();
+}
+
 static void esp_zb_task(void *pv) {
     esp_zb_cfg_t zb_cfg = {
         .esp_zb_role = ESP_ZB_DEVICE_TYPE_ROUTER,
@@ -66,6 +160,9 @@ static void esp_zb_task(void *pv) {
     esp_zb_ep_list_t *ep_list = esp_zb_ep_list_create();
     esp_zb_color_dimmable_light_cfg_t light_cfg = ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG();
     esp_zb_cluster_list_t *cluster_list = esp_zb_color_dimmable_light_clusters_create(&light_cfg);
+
+    register_mfg_cluster(cluster_list);
+    override_basic_identity(cluster_list);
 
     esp_zb_endpoint_config_t ep_cfg = {
         .endpoint = EP_ID,
@@ -98,6 +195,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
                 } else {
                     s_connected = true;
                     zigled_zb_set_connected(true);
+                    sync_attrs_from_nvs();
                     ESP_LOGI(TAG, "rejoined network");
                 }
             }
@@ -106,6 +204,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
             if (err_status == ESP_OK) {
                 s_connected = true;
                 zigled_zb_set_connected(true);
+                sync_attrs_from_nvs();
                 ESP_LOGI(TAG, "joined network");
             } else {
                 esp_zb_scheduler_alarm((esp_zb_callback_t)esp_zb_bdb_start_top_level_commissioning, ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);

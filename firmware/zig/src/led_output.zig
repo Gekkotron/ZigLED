@@ -75,7 +75,7 @@ export fn zigled_led_output_init(gpio: u8, count: u16) void {
         .flags = .{ .with_dma = 0 },
     };
     const err = c.led_strip_new_rmt_device(@ptrCast(&strip_config), @ptrCast(&rmt_config), &handle);
-    if (err != c.ESP_OK) unreachable;
+    if (err != c.ESP_OK) @panic("led_output init failed");
 }
 
 export fn zigled_led_output_push(bytes: [*]const u8, len: u32) void {

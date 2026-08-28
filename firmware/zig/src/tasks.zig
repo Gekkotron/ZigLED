@@ -124,6 +124,7 @@ fn renderTask(_: ?*anyopaque) callconv(.c) void {
         } else {
             effect_engine.render(cfg, &g_state, now, &g_fb);
         }
+        g_pp.applyBrightness(&g_fb, g_state.level);
         g_pp.applyGamma(&g_fb);
         g_pp.identifyOverlay(&g_fb, now);
         g_pp.commissioningHint(&g_fb, now);
@@ -139,6 +140,15 @@ fn renderTask(_: ?*anyopaque) callconv(.c) void {
         checkButton();
     }
 }
+
+export fn zigled_get_on() bool { return g_state.on; }
+export fn zigled_get_level() u8 { return g_state.level; }
+export fn zigled_get_color_x() u16 { return g_state.color_x; }
+export fn zigled_get_color_y() u16 { return g_state.color_y; }
+export fn zigled_get_effect_id() u16 { return g_state.effect_id; }
+export fn zigled_get_effect_speed() u8 { return g_state.effect_speed; }
+export fn zigled_get_effect_intensity() u8 { return g_state.effect_intensity; }
+export fn zigled_get_palette_id() u8 { return g_state.palette_id; }
 
 export fn zigled_start() void {
     loadStateFromNvs();

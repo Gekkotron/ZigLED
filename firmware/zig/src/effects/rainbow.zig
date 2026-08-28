@@ -11,15 +11,9 @@ pub fn make(comptime cfg: config.LedConfig) ee.Effect(cfg) {
             if (!state.on) { fb.clear(.{}); return; }
             const speed = @as(u64, state.effect_speed) + 1;
             const scroll: u32 = @intCast((t_ms * speed) % 65536);
-            const level = state.level;
             for (&fb.linear, 0..) |*p, i| {
                 const t: u32 = (@as(u32, @intCast(i)) * (65535 / cfg.count) + scroll) & 0xFFFF;
-                const rgb = palette.palettes[0].sample(@intCast(t));
-                p.* = .{
-                    .r = @intCast((@as(u16, rgb.r) * level + 127) / 255),
-                    .g = @intCast((@as(u16, rgb.g) * level + 127) / 255),
-                    .b = @intCast((@as(u16, rgb.b) * level + 127) / 255),
-                };
+                p.* = palette.palettes[0].sample(@intCast(t));
             }
         }
     };

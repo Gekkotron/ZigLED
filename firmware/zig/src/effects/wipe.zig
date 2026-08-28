@@ -9,7 +9,7 @@ pub fn make(comptime cfg: config.LedConfig) ee.Effect(cfg) {
     const R = struct {
         fn render(state: *const st.EngineState, t_ms: u64, fb: *fbm.FrameBuffer(cfg)) void {
             if (!state.on) { fb.clear(.{}); return; }
-            const commanded = c.xyToRgb(state.color_x, state.color_y, state.level);
+            const commanded = c.xyToRgb(state.color_x, state.color_y, 255);
             const col = palette.sample(state.palette_id, 0, commanded);
             const period_ms: u64 = @as(u64, 2 * cfg.count) * (256 - @as(u64, state.effect_speed)) / 2 + 200;
             const cycle: u64 = t_ms % period_ms;
