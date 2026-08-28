@@ -1,48 +1,49 @@
 # ZigLED
 
-Zigbee-controlled WS2815 LED strip driven by an ESP32-C6, with a matching Zigbee2MQTT external converter for Home Assistant integration.
+Zig + ESP-IDF firmware for the ESP32-C6 that drives WS28xx addressable LEDs and exposes them over Zigbee 3.0. Compatible with Zigbee2MQTT via a shipped external converter. Nine local effects, seven palettes, standalone offline mode, factory reset via BOOT.
 
-The controller exposes the strip as three Zigbee endpoints:
-
-| Endpoint | Cluster              | Purpose                                |
-| -------- | -------------------- | -------------------------------------- |
-| `10`     | Color Dimmable Light | on/off, brightness, RGB (xy / hs)      |
-| `11`     | Multistate Output    | animation selector (1..9)              |
-| `12`     | Analog Output        | animation speed (1..100)               |
-
-Animations run locally on the C6 at 50 fps — Zigbee only carries the selection, never per-frame pixel data.
-
-## Contents
-
-- `zb_ws2815_c6/zb_ws2815_c6.ino` — Arduino firmware for the ESP32-C6.
-- `zb_ws2815.mjs` — Zigbee2MQTT external converter (endpoints, light, animation, speed).
+By Gekkotron.
 
 ## Hardware
 
-- ESP32-C6 board (tested on Seeed XIAO ESP32-C6).
-- 120-LED WS2815 strip (12 V).
-- 3.3 V → 5 V level shifter between `GPIO2` and the strip's DIN.
-- 12 V PSU sized for the strip; common ground with the board and the level shifter is mandatory.
-- Factory reset: hold `BOOT` for 3 s.
+- XIAO ESP32-C6 (or any ESP32-C6 board — GPIO pins are configurable in `firmware/zig/src/config.zig`).
+- WS2815 (default), WS2812B, or WS2814 strip. Data line on GPIO2 through a level shifter. 12 V PSU with common ground.
+- BOOT on GPIO9 (default XIAO_ESP32C6).
 
-## Firmware build (Arduino IDE)
+## Prerequisites
 
-- Board: `XIAO_ESP32C6` (or `ESP32C6 Dev Module`).
-- Zigbee Mode: `Zigbee ZCZR` (coordinator/router).
-- Partition Scheme: `Zigbee ZCZR 4MB with spiffs`.
-- Core: `esp32 >= 3.3.0`.
-- Library: `FastLED >= 3.7.0`.
+- Zig ≥ 0.14.0 (tested with 0.16.0 via Homebrew)
+- ESP-IDF v5.3.2 (installed via `install.sh` in the repo root, or manually — see `install.sh` for the exact commands)
+- ESP-Zigbee-SDK ≥ v1.6 (pulled by `firmware/main/idf_component.yml`)
+- Zigbee2MQTT ≥ 1.35 for the external converter
 
-## Zigbee2MQTT integration
+## Build and flash
 
-1. Copy `zb_ws2815.mjs` to `<z2m-data>/external_converters/zb_ws2815.mjs`.
-2. Restart Zigbee2MQTT.
-3. Re-pair the device (endpoint layout changed, so a re-pair is required).
+```bash
+cd firmware
+idf.py set-target esp32c6
+idf.py build
+idf.py -p /dev/tty.usbmodem* flash monitor
+```
 
-## Animations
+## Run host unit tests
 
-`solid`, `rainbow`, `comet`, `breathe`, `twinkle`, `chase`, `fire`, `wipe`, `candle`.
+```bash
+cd firmware/zig
+zig build test
+```
 
-## License
+## Install the Z2M converter
 
-See `LICENSE` if present; otherwise all rights reserved by [Gekkotron](https://github.com/Gekkotron).
+Copy `z2m/gekkotron_zigled.js` into your Zigbee2MQTT data directory's `external_converters/` folder, add it to `configuration.yaml`:
+
+```yaml
+external_converters:
+  - gekkotron_zigled.js
+```
+
+Restart Zigbee2MQTT. Pair the device and it will appear as `Gekkotron ZigLED-1` in Home Assistant with a full light card plus dropdowns for effect, palette, speed, intensity.
+
+## Reference prototype
+
+The `zb_ws2815_c6/` directory and `zb_ws2815.mjs` are the Arduino/FastLED prototype and its converter. They are kept in-tree as reference for effect tuning (fire zones, phase-step scaling) and are not built by this project.
