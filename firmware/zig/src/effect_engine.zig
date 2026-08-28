@@ -34,6 +34,8 @@ const wipe_mod = @import("effects/wipe.zig");
 const sparkle_mod = @import("effects/sparkle.zig");
 const rainbow_mod = @import("effects/rainbow.zig");
 const candle_mod = @import("effects/candle.zig");
+const fire_1d_mod = @import("effects/fire_1d.zig");
+const plasma_2d_mod = @import("effects/plasma_2d.zig");
 
 pub fn effects(comptime cfg: config.LedConfig) []const Effect(cfg) {
     const all = comptime [_]Effect(cfg){
@@ -44,6 +46,8 @@ pub fn effects(comptime cfg: config.LedConfig) []const Effect(cfg) {
         sparkle_mod.make(cfg),
         rainbow_mod.make(cfg),
         candle_mod.make(cfg),
+        fire_1d_mod.make(cfg),
+        plasma_2d_mod.make(cfg),
     };
     const kind = comptime cfg.layoutKind();
     comptime var filtered: []const Effect(cfg) = &.{};

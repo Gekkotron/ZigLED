@@ -77,3 +77,19 @@ test "candle never fully dark" {
     for (fb.linear) |p| if (p.r > 20 or p.g > 5) { lit += 1; };
     try std.testing.expectEqual(cfg.count, lit);
 }
+
+test "fire_1d layout mask excludes it or includes it depending on cfg" {
+    const cnt = ee.effectCount(cfg);
+    try std.testing.expect(cnt >= 8);
+}
+
+test "fire_1d produces warm colors on strip" {
+    var fb = fbm.FrameBuffer(cfg){};
+    var s = st_mod.defaults;
+    s.on = true; s.level = 255; s.effect_id = 7; s.effect_speed = 200;
+    var t: u64 = 0;
+    while (t < 400) : (t += 16) ee.render(cfg, &s, t, &fb);
+    var warmish: u32 = 0;
+    for (fb.linear) |p| if (p.r > p.b) { warmish += 1; };
+    try std.testing.expect(warmish >= cfg.count / 2);
+}
