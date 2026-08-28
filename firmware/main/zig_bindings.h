@@ -21,6 +21,7 @@ void zigled_on_mfg_intensity(uint8_t v);
 void zigled_on_mfg_palette(uint8_t v);
 void zigled_on_identify(uint16_t seconds);
 bool zigled_next_command(uint8_t *out_tag, uint32_t *out_a, uint32_t *out_b);
+void zigled_zb_set_connected(bool v);
 
 #ifdef __cplusplus
 }

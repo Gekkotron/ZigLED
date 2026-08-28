@@ -97,6 +97,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
                     esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
                 } else {
                     s_connected = true;
+                    zigled_zb_set_connected(true);
                     ESP_LOGI(TAG, "rejoined network");
                 }
             }
@@ -104,10 +105,15 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
         case ESP_ZB_BDB_SIGNAL_STEERING:
             if (err_status == ESP_OK) {
                 s_connected = true;
+                zigled_zb_set_connected(true);
                 ESP_LOGI(TAG, "joined network");
             } else {
                 esp_zb_scheduler_alarm((esp_zb_callback_t)esp_zb_bdb_start_top_level_commissioning, ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);
             }
+            break;
+        case ESP_ZB_ZDO_SIGNAL_LEAVE:
+            s_connected = false;
+            zigled_zb_set_connected(false);
             break;
         default:
             break;
