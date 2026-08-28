@@ -78,6 +78,12 @@ pub fn build(b: *std.Build) void {
             .{ .name = "config", .mod = config_mod },
             .{ .name = "state", .mod = state_mod },
         } },
+        .{ .src = "tests/effects_test.zig", .imports = &.{
+            .{ .name = "effect_engine", .mod = effect_engine_mod },
+            .{ .name = "frame_buffer", .mod = frame_buffer_mod },
+            .{ .name = "config", .mod = config_mod },
+            .{ .name = "state", .mod = state_mod },
+        } },
     };
 
     const test_step = b.step("test", "Run host unit tests");

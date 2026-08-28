@@ -28,10 +28,16 @@ pub fn Effect(comptime cfg: config.LedConfig) type {
 }
 
 const solid_mod = @import("effects/solid.zig");
+const breathe_mod = @import("effects/breathe.zig");
+const comet_mod = @import("effects/comet.zig");
+const wipe_mod = @import("effects/wipe.zig");
 
 pub fn effects(comptime cfg: config.LedConfig) []const Effect(cfg) {
     const all = comptime [_]Effect(cfg){
         solid_mod.make(cfg),
+        breathe_mod.make(cfg),
+        comet_mod.make(cfg),
+        wipe_mod.make(cfg),
     };
     const kind = comptime cfg.layoutKind();
     comptime var filtered: []const Effect(cfg) = &.{};
