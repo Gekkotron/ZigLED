@@ -32,5 +32,5 @@ pub fn make(comptime cfg: config.LedConfig) ee.Effect(cfg) {
             }
         }
     };
-    return .{ .name = "plasma_2d", .layouts = .{ .serpentine = true, .panels = true }, .render = R.render };
+    return .{ .name = "plasma_2d", .layouts = .{ .strip = true, .serpentine = true, .panels = true }, .render = R.render };
 }
