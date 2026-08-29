@@ -19,7 +19,9 @@ pub const LedConfig = struct {
     layout: Layout,
     led_data_gpio: u8,
     boot_button_gpio: u8,
-    pir_gpio: u8 = 4,
+    // ESP32-C6 GPIO number, not the XIAO board label. On the XIAO
+    // ESP32-C6, pad "D4" == GPIO 22; "D3" == GPIO 21; "D5" == GPIO 23.
+    pir_gpio: u8 = 22,
     pir_enabled: bool = true,
     external_antenna: bool = true,
     antenna_rf_power_gpio: u8 = 3,
