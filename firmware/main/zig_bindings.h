@@ -39,6 +39,7 @@ uint8_t  zigled_get_pir_gpio(void);
 bool     zigled_get_external_antenna(void);
 uint8_t  zigled_get_antenna_rf_power_gpio(void);
 uint8_t  zigled_get_antenna_select_gpio(void);
+int8_t   zigled_get_tx_power_dbm(void);
 
 #ifdef __cplusplus
 }

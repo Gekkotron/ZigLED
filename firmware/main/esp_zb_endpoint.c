@@ -230,6 +230,9 @@ static void esp_zb_task(void *pv) {
     esp_zb_device_register(ep_list);
 
     esp_zb_set_primary_network_channel_set(1u << 15);
+    int8_t tx = zigled_get_tx_power_dbm();
+    esp_zb_set_tx_power(tx);
+    ESP_LOGI(TAG, "TX power set to %d dBm", tx);
     esp_zb_core_action_handler_register(esp_zb_action_handler);
     ESP_LOGI(TAG, "esp_zb_start (autostart=false)");
     ESP_ERROR_CHECK(esp_zb_start(false));

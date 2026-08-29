@@ -21,9 +21,10 @@ pub const LedConfig = struct {
     boot_button_gpio: u8,
     pir_gpio: u8 = 4,
     pir_enabled: bool = false,
-    external_antenna: bool = false,
+    external_antenna: bool = true,
     antenna_rf_power_gpio: u8 = 3,
     antenna_select_gpio: u8 = 14,
+    tx_power_dbm: i8 = 20,
 
     pub fn pixelStride(comptime self: LedConfig) u8 {
         return switch (self.pixel_format) {
@@ -53,6 +54,7 @@ pub const cfg: LedConfig = .{
     .external_antenna = false,
     .antenna_rf_power_gpio = 3,
     .antenna_select_gpio = 14,
+    .tx_power_dbm = 20,
 };
 
 test "pixelStride rgb=3, rgbw=4" {

@@ -168,6 +168,7 @@ export fn zigled_get_pir_gpio() u8 { return cfg.pir_gpio; }
 export fn zigled_get_external_antenna() bool { return cfg.external_antenna; }
 export fn zigled_get_antenna_rf_power_gpio() u8 { return cfg.antenna_rf_power_gpio; }
 export fn zigled_get_antenna_select_gpio() u8 { return cfg.antenna_select_gpio; }
+export fn zigled_get_tx_power_dbm() i8 { return cfg.tx_power_dbm; }
 
 export fn zigled_start() void {
     loadStateFromNvs();
