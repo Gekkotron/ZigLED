@@ -1,4 +1,5 @@
 #include "esp_log.h"
+#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
@@ -8,8 +9,23 @@
 
 static const char *TAG = "ZIGLED_BOOT";
 
-#define PIR_GPIO         3
 #define OCCUPANCY_EP_ID  2
+
+static void select_external_antenna(void) {
+    uint8_t rf_pwr = zigled_get_antenna_rf_power_gpio();
+    uint8_t sel    = zigled_get_antenna_select_gpio();
+    gpio_config_t io = {
+        .pin_bit_mask = (1ULL << rf_pwr) | (1ULL << sel),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&io));
+    gpio_set_level(rf_pwr, 0);  /* RF switch power on (active low) */
+    gpio_set_level(sel, 1);     /* select external antenna */
+    ESP_LOGI(TAG, "external antenna selected (rf_pwr=GPIO%d LOW, sel=GPIO%d HIGH)", rf_pwr, sel);
+}
 
 void app_main(void) {
     esp_err_t ret = nvs_flash_init();
@@ -19,6 +35,9 @@ void app_main(void) {
     }
     ESP_ERROR_CHECK(ret);
     ESP_LOGI(TAG, "%s", zigled_greet());
+    if (zigled_get_external_antenna()) {
+        select_external_antenna();
+    }
     zigled_start();
     zigled_zb_init();
     if (zigled_get_pir_enabled()) {

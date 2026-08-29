@@ -36,6 +36,9 @@ uint16_t zigled_get_pir_unoccupied_delay_s(void);
 void     zigled_set_pir_unoccupied_delay_s(uint16_t v);
 bool     zigled_get_pir_enabled(void);
 uint8_t  zigled_get_pir_gpio(void);
+bool     zigled_get_external_antenna(void);
+uint8_t  zigled_get_antenna_rf_power_gpio(void);
+uint8_t  zigled_get_antenna_select_gpio(void);
 
 #ifdef __cplusplus
 }
