@@ -29,8 +29,11 @@ static void IRAM_ATTR gpio_isr(void *arg) {
 
 static void publish_occupancy(bool occupied) {
     s_occupied = occupied;
-    ESP_LOGI(TAG, "occupancy=%d", occupied);
-    if (!zigled_zb_connected()) return;
+    ESP_LOGI(TAG, "occupancy=%d (pushing to Zigbee attribute cache + triggering report)", occupied);
+    if (!zigled_zb_connected()) {
+        ESP_LOGW(TAG, "not connected to Zigbee network — value cached locally only");
+        return;
+    }
     uint8_t val = occupied ? 1 : 0;
     esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_zcl_set_attribute_val(
@@ -39,7 +42,7 @@ static void publish_occupancy(bool occupied) {
         ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
         ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_OCCUPANCY_ID,   /* 0x0000 */
         &val,
-        false);
+        true);   /* check_change=true so a report fires when it flips */
     esp_zb_lock_release();
 }
 
@@ -53,11 +56,12 @@ static void sensor_task(void *pv) {
     for (;;) {
         uint32_t level = 0;
         if (xTaskNotifyWait(0, 0xffffffff, &level, portMAX_DELAY) != pdTRUE) continue;
-        ESP_LOGI(TAG, "edge level=%u occupied=%d delay_s=%u", (unsigned)level, s_occupied, (unsigned)s_delay_s);
         if (level != 0) {
+            ESP_LOGI(TAG, "PIR input HIGH (motion detected) — occupied=%d delay_s=%u", s_occupied, (unsigned)s_delay_s);
             if (xTimerIsTimerActive(s_timer) != pdFALSE) xTimerStop(s_timer, portMAX_DELAY);
             if (!s_occupied) publish_occupancy(true);
         } else {
+            ESP_LOGI(TAG, "PIR input LOW (motion ended) — occupied=%d, will report unoccupied in %us", s_occupied, (unsigned)s_delay_s);
             if (s_delay_s == 0) {
                 ESP_LOGW(TAG, "delay_s=0, publishing unoccupied immediately (set occupancy_timeout > 0 in Z2M)");
                 if (s_occupied) publish_occupancy(false);
