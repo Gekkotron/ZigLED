@@ -20,7 +20,7 @@ pub const LedConfig = struct {
     led_data_gpio: u8,
     boot_button_gpio: u8,
     pir_gpio: u8 = 4,
-    pir_enabled: bool = false,
+    pir_enabled: bool = true,
     external_antenna: bool = true,
     antenna_rf_power_gpio: u8 = 3,
     antenna_select_gpio: u8 = 14,
@@ -49,12 +49,10 @@ pub const cfg: LedConfig = .{
     .layout = .strip,
     .led_data_gpio = 2,
     .boot_button_gpio = 9,
-    .pir_gpio = 4,
-    .pir_enabled = false,
-    .external_antenna = false,
-    .antenna_rf_power_gpio = 3,
-    .antenna_select_gpio = 14,
-    .tx_power_dbm = 20,
+    // The optional toggles (pir_enabled, external_antenna, pir_gpio,
+    // antenna_*_gpio, tx_power_dbm) are omitted here so their struct
+    // field defaults from LedConfig above take effect. Edit the
+    // struct defaults to change them.
 };
 
 test "pixelStride rgb=3, rgbw=4" {
