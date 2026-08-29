@@ -158,6 +158,11 @@ export fn zigled_get_effect_id() u16 { return g_state.effect_id; }
 export fn zigled_get_effect_speed() u8 { return g_state.effect_speed; }
 export fn zigled_get_effect_intensity() u8 { return g_state.effect_intensity; }
 export fn zigled_get_palette_id() u8 { return g_state.palette_id; }
+export fn zigled_get_pir_unoccupied_delay_s() u16 { return g_state.pir_unoccupied_delay_s; }
+export fn zigled_set_pir_unoccupied_delay_s(v: u16) void {
+    g_state.pir_unoccupied_delay_s = v;
+    g_debouncer.markDirty(nowMs());
+}
 
 export fn zigled_start() void {
     loadStateFromNvs();

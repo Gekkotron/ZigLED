@@ -19,6 +19,7 @@ pub const LedConfig = struct {
     layout: Layout,
     led_data_gpio: u8,
     boot_button_gpio: u8,
+    pir_gpio: u8 = 3,
 
     pub fn pixelStride(comptime self: LedConfig) u8 {
         return switch (self.pixel_format) {
@@ -43,6 +44,7 @@ pub const cfg: LedConfig = .{
     .layout = .strip,
     .led_data_gpio = 2,
     .boot_button_gpio = 9,
+    .pir_gpio = 3,
 };
 
 test "pixelStride rgb=3, rgbw=4" {

@@ -7,10 +7,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "zig_bindings.h"
+#include "sensor.h"
 
 static const char *TAG = "ZIGLED_ZB";
 
 #define EP_ID           1
+#define EP_ID_SENSOR    2
 #define MFG_CLUSTER_ID  0xFC01
 #define MFG_CODE        0x1337
 
@@ -53,6 +55,13 @@ static esp_err_t esp_zb_action_handler(esp_zb_core_action_callback_id_t id, cons
                 case 0x0001: zigled_on_mfg_speed(*(uint8_t *)m->attribute.data.value); break;
                 case 0x0002: zigled_on_mfg_intensity(*(uint8_t *)m->attribute.data.value); break;
                 case 0x0003: zigled_on_mfg_palette(*(uint8_t *)m->attribute.data.value); break;
+            }
+            break;
+        case ESP_ZB_ZCL_CLUSTER_ID_OCCUPANCY_SENSING:
+            if (m->attribute.id == ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_PIR_OCC_TO_UNOCC_DELAY_ID) {
+                uint16_t delay_s = *(uint16_t *)m->attribute.data.value;
+                zigled_sensor_set_unoccupied_delay_s(delay_s);
+                zigled_set_pir_unoccupied_delay_s(delay_s);
             }
             break;
         default:
@@ -185,6 +194,43 @@ static void esp_zb_task(void *pv) {
         .app_device_version = 0,
     };
     esp_zb_ep_list_add_ep(ep_list, cluster_list, ep_cfg);
+
+    esp_zb_cluster_list_t *sensor_list = esp_zb_zcl_cluster_list_create();
+
+    esp_zb_attribute_list_t *basic_s = esp_zb_basic_cluster_create(NULL);
+    esp_zb_cluster_list_add_basic_cluster(sensor_list, basic_s, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+    esp_zb_attribute_list_t *ident_s = esp_zb_identify_cluster_create(NULL);
+    esp_zb_cluster_list_add_identify_cluster(sensor_list, ident_s, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+
+    esp_zb_attribute_list_t *occ_attrs = esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_OCCUPANCY_SENSING);
+    static uint8_t occ_default = 0;
+    static uint8_t occ_type_pir = 0;
+    static uint16_t occ_delay_default = 60;
+    esp_zb_custom_cluster_add_custom_attr(occ_attrs,
+        ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_OCCUPANCY_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_8BITMAP,
+        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &occ_default);
+    esp_zb_custom_cluster_add_custom_attr(occ_attrs,
+        ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_OCCUPANCY_SENSOR_TYPE_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM,
+        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
+        &occ_type_pir);
+    esp_zb_custom_cluster_add_custom_attr(occ_attrs,
+        ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_PIR_OCC_TO_UNOCC_DELAY_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_U16,
+        ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE,
+        &occ_delay_default);
+    esp_zb_cluster_list_add_custom_cluster(sensor_list, occ_attrs, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+
+    esp_zb_endpoint_config_t sensor_ep_cfg = {
+        .endpoint = EP_ID_SENSOR,
+        .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+        .app_device_id = 0x0107,   /* HA Occupancy Sensor device ID */
+        .app_device_version = 0,
+    };
+    esp_zb_ep_list_add_ep(ep_list, sensor_list, sensor_ep_cfg);
+
     esp_zb_device_register(ep_list);
 
     esp_zb_set_primary_network_channel_set(1u << 15);

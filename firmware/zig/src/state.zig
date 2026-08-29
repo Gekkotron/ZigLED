@@ -9,6 +9,7 @@ pub const EngineState = struct {
     effect_speed: u8 = 128,
     effect_intensity: u8 = 128,
     palette_id: u8 = 0,
+    pir_unoccupied_delay_s: u16 = 60,
 };
 
 pub const defaults: EngineState = .{};

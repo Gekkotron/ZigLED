@@ -1,4 +1,4 @@
-import {light, identify, numeric, enumLookup, deviceEndpoints} from 'zigbee-herdsman-converters/lib/modernExtend';
+import {light, identify, numeric, enumLookup, deviceEndpoints, occupancy} from 'zigbee-herdsman-converters/lib/modernExtend';
 
 const MFG_CLUSTER = 0xFC01;
 const MFG_CODE = 0x1337;
@@ -15,8 +15,8 @@ export default {
     description: 'Zigbee WS28xx LED controller on ESP32-C6',
     extend: [
         deviceEndpoints({
-            endpoints: {light: 1},
-            multiEndpointSkip: ['state', 'brightness', 'color', 'color_mode', 'color_xy', 'color_temp'],
+            endpoints: {light: 1, occupancy: 2},
+            multiEndpointSkip: ['state', 'brightness', 'color', 'color_mode', 'color_xy', 'color_temp', 'occupancy'],
         }),
         identify(),
         light({
@@ -25,6 +25,19 @@ export default {
             effect: false,
             powerOnBehavior: false,
             endpointNames: ['light'],
+        }),
+        occupancy({
+            endpointNames: ['occupancy'],
+        }),
+        numeric({
+            name: 'occupancy_timeout',
+            cluster: 'msOccupancySensing',
+            attribute: 'pirOToUDelay',
+            valueMin: 0,
+            valueMax: 3600,
+            unit: 's',
+            description: 'Seconds before reporting unoccupied after motion ends',
+            endpointNames: ['occupancy'],
         }),
         enumLookup({
             name: 'effect',

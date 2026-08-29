@@ -32,6 +32,8 @@ uint16_t zigled_get_effect_id(void);
 uint8_t  zigled_get_effect_speed(void);
 uint8_t  zigled_get_effect_intensity(void);
 uint8_t  zigled_get_palette_id(void);
+uint16_t zigled_get_pir_unoccupied_delay_s(void);
+void     zigled_set_pir_unoccupied_delay_s(uint16_t v);
 
 #ifdef __cplusplus
 }

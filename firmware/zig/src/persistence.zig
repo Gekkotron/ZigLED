@@ -1,8 +1,8 @@
 const std = @import("std");
 const s = @import("state");
 
-pub const SCHEMA_VERSION: u16 = 1;
-pub const SERIALIZED_SIZE: usize = 16;
+pub const SCHEMA_VERSION: u16 = 2;
+pub const SERIALIZED_SIZE: usize = 18;
 pub const DEBOUNCE_MS: u32 = 2000;
 
 pub fn encode(st: s.EngineState) [SERIALIZED_SIZE]u8 {
@@ -17,8 +17,9 @@ pub fn encode(st: s.EngineState) [SERIALIZED_SIZE]u8 {
     out[11] = st.effect_intensity;
     out[12] = st.palette_id;
     out[13] = 0;
-    out[14] = 0;
-    out[15] = 0;
+    std.mem.writeInt(u16, out[14..16], st.pir_unoccupied_delay_s, .little);
+    out[16] = 0;
+    out[17] = 0;
     return out;
 }
 
@@ -35,6 +36,7 @@ pub fn decode(bytes: []const u8) ?s.EngineState {
         .effect_speed = bytes[10],
         .effect_intensity = bytes[11],
         .palette_id = bytes[12],
+        .pir_unoccupied_delay_s = std.mem.readInt(u16, bytes[14..16], .little),
     };
 }
 
