@@ -1,4 +1,4 @@
-import {light, identify, numeric, enumLookup} from 'zigbee-herdsman-converters/lib/modernExtend';
+import {light, identify, numeric, enumLookup, occupancy} from 'zigbee-herdsman-converters/lib/modernExtend';
 
 const MFG_CLUSTER = 0xFC01;
 const MFG_CODE = 0x1337;
@@ -13,7 +13,7 @@ export default {
     model: 'ZigLED-1',
     vendor: 'Gekkotron',
     description: 'Zigbee WS28xx LED controller on ESP32-C6',
-    endpoint: (device) => ({default: 1}),
+    endpoint: (device) => ({default: 1, occupancy: 2}),
     extend: [
         identify(),
         light({
@@ -22,19 +22,19 @@ export default {
             effect: false,
             powerOnBehavior: false,
         }),
-        // When PIR is enabled in firmware (config.zig: pir_enabled = true),
-        // reimport occupancy from modernExtend, switch to
-        //   endpoint: (device) => ({default: 1, occupancy: 2}),
-        // and add:
-        //   occupancy({endpointNames: ['occupancy']}),
-        //   numeric({
-        //       name: 'occupancy_timeout',
-        //       cluster: 'msOccupancySensing',
-        //       attribute: 'pirOToUDelay',
-        //       valueMin: 0, valueMax: 3600, unit: 's',
-        //       description: 'Seconds before reporting unoccupied after motion ends',
-        //       endpointNames: ['occupancy'],
-        //   }),
+        occupancy({
+            endpointNames: ['occupancy'],
+        }),
+        numeric({
+            name: 'occupancy_timeout',
+            cluster: 'msOccupancySensing',
+            attribute: 'pirOToUDelay',
+            valueMin: 0,
+            valueMax: 3600,
+            unit: 's',
+            description: 'Seconds before reporting unoccupied after motion ends',
+            endpointNames: ['occupancy'],
+        }),
         enumLookup({
             name: 'effect',
             cluster: MFG_CLUSTER,
