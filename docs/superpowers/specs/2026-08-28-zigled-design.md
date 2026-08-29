@@ -69,7 +69,7 @@ Default reporting is configured on: `OnOff.OnOff`, `LevelControl.CurrentLevel`, 
 
 ### 4.4 Z2M external converter
 
-Ships in the repo as `z2m/gekkotron_zigled.js`:
+Ships in the repo as `z2m/gekkotron_zigled.mjs`:
 
 - Fingerprints on `modelID="ZigLED-1"` + `manufacturerName="Gekkotron"`.
 - Standard clusters → `zigbee-herdsman-converters` `modernExtend` (`light`, `identify`), yielding all default color-bulb UX.
@@ -288,7 +288,7 @@ No diagnostic Zigbee cluster in v1.
 The existing `zb_ws2815_c6/` firmware and `zb_ws2815.mjs` converter continue to work, unchanged, on devices flashed with them. ZigLED presents a **different** external contract (`Gekkotron / ZigLED-1`, single endpoint, mfg cluster), so a device flashed with ZigLED must be:
 
 1. Re-paired to the Zigbee coordinator (fresh join — no migration of the old three-endpoint state).
-2. Configured against the new Z2M converter `gekkotron_zigled.js`.
+2. Configured against the new Z2M converter `gekkotron_zigled.mjs`.
 
 The prototype's `.ino` and `.mjs` files remain in the repo as reference. Fire-zone counts (5), phase-step scaling, and Perlin-noise candle tuning are directly reused in the Zig effect implementations.
 
@@ -303,7 +303,7 @@ ZigLED/
 │   ├── sdkconfig.defaults
 │   └── partitions.csv
 ├── z2m/
-│   └── gekkotron_zigled.js       # external converter
+│   └── gekkotron_zigled.mjs      # external converter
 ├── tests/                        # Zig host tests
 ├── build/                        # build artifacts (gitignored)
 ├── zb_ws2815.mjs                 # reference: Arduino-era converter

@@ -35,14 +35,14 @@ zig build test
 
 ## Install the Z2M converter
 
-Copy `z2m/gekkotron_zigled.js` into your Zigbee2MQTT data directory's `external_converters/` folder, add it to `configuration.yaml`:
+Copy `z2m/gekkotron_zigled.mjs` into your Zigbee2MQTT data directory's `external_converters/` folder, add it to `configuration.yaml`:
 
 ```yaml
 external_converters:
-  - gekkotron_zigled.js
+  - gekkotron_zigled.mjs
 ```
 
-Restart Zigbee2MQTT. Pair the device and it will appear as `Gekkotron ZigLED-1` in Home Assistant with a full light card plus dropdowns for effect, palette, speed, intensity.
+Restart Zigbee2MQTT and pair the device — it appears as `Gekkotron ZigLED-1` with the standard light controls plus dropdowns/sliders for effect, palette, speed, and intensity.
 
 ## Reference prototype
 
