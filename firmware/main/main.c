@@ -21,6 +21,8 @@ void app_main(void) {
     ESP_LOGI(TAG, "%s", zigled_greet());
     zigled_start();
     zigled_zb_init();
-    zigled_sensor_init(PIR_GPIO, OCCUPANCY_EP_ID, zigled_get_pir_unoccupied_delay_s());
+    if (zigled_get_pir_enabled()) {
+        zigled_sensor_init(zigled_get_pir_gpio(), OCCUPANCY_EP_ID, zigled_get_pir_unoccupied_delay_s());
+    }
     vTaskDelay(portMAX_DELAY);
 }

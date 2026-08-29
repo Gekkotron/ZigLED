@@ -195,35 +195,37 @@ static void esp_zb_task(void *pv) {
     };
     esp_zb_ep_list_add_ep(ep_list, cluster_list, ep_cfg);
 
-    esp_zb_cluster_list_t *sensor_list = esp_zb_zcl_cluster_list_create();
+    if (zigled_get_pir_enabled()) {
+        esp_zb_cluster_list_t *sensor_list = esp_zb_zcl_cluster_list_create();
 
-    esp_zb_attribute_list_t *basic_s = esp_zb_basic_cluster_create(NULL);
-    esp_zb_cluster_list_add_basic_cluster(sensor_list, basic_s, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
-    esp_zb_attribute_list_t *ident_s = esp_zb_identify_cluster_create(NULL);
-    esp_zb_cluster_list_add_identify_cluster(sensor_list, ident_s, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+        esp_zb_attribute_list_t *basic_s = esp_zb_basic_cluster_create(NULL);
+        esp_zb_cluster_list_add_basic_cluster(sensor_list, basic_s, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+        esp_zb_attribute_list_t *ident_s = esp_zb_identify_cluster_create(NULL);
+        esp_zb_cluster_list_add_identify_cluster(sensor_list, ident_s, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
 
-    esp_zb_occupancy_sensing_cluster_cfg_t occ_cfg = {
-        .occupancy = 0,
-        .sensor_type = 0,          /* 0 = PIR */
-        .sensor_type_bitmap = 1,   /* bit 0 = PIR */
-    };
-    esp_zb_attribute_list_t *occ_attrs = esp_zb_occupancy_sensing_cluster_create(&occ_cfg);
-    static uint16_t occ_delay_default = 60;
-    esp_zb_cluster_add_attr(occ_attrs,
-        ESP_ZB_ZCL_CLUSTER_ID_OCCUPANCY_SENSING,
-        ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_PIR_OCC_TO_UNOCC_DELAY_ID,
-        ESP_ZB_ZCL_ATTR_TYPE_U16,
-        ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE,
-        &occ_delay_default);
-    esp_zb_cluster_list_add_occupancy_sensing_cluster(sensor_list, occ_attrs, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+        esp_zb_occupancy_sensing_cluster_cfg_t occ_cfg = {
+            .occupancy = 0,
+            .sensor_type = 0,          /* 0 = PIR */
+            .sensor_type_bitmap = 1,   /* bit 0 = PIR */
+        };
+        esp_zb_attribute_list_t *occ_attrs = esp_zb_occupancy_sensing_cluster_create(&occ_cfg);
+        static uint16_t occ_delay_default = 60;
+        esp_zb_cluster_add_attr(occ_attrs,
+            ESP_ZB_ZCL_CLUSTER_ID_OCCUPANCY_SENSING,
+            ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_PIR_OCC_TO_UNOCC_DELAY_ID,
+            ESP_ZB_ZCL_ATTR_TYPE_U16,
+            ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE,
+            &occ_delay_default);
+        esp_zb_cluster_list_add_occupancy_sensing_cluster(sensor_list, occ_attrs, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
 
-    esp_zb_endpoint_config_t sensor_ep_cfg = {
-        .endpoint = EP_ID_SENSOR,
-        .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
-        .app_device_id = 0x0107,   /* HA Occupancy Sensor device ID */
-        .app_device_version = 0,
-    };
-    esp_zb_ep_list_add_ep(ep_list, sensor_list, sensor_ep_cfg);
+        esp_zb_endpoint_config_t sensor_ep_cfg = {
+            .endpoint = EP_ID_SENSOR,
+            .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+            .app_device_id = 0x0107,   /* HA Occupancy Sensor device ID */
+            .app_device_version = 0,
+        };
+        esp_zb_ep_list_add_ep(ep_list, sensor_list, sensor_ep_cfg);
+    }
 
     esp_zb_device_register(ep_list);
 

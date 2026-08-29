@@ -163,6 +163,8 @@ export fn zigled_set_pir_unoccupied_delay_s(v: u16) void {
     g_state.pir_unoccupied_delay_s = v;
     g_debouncer.markDirty(nowMs());
 }
+export fn zigled_get_pir_enabled() bool { return cfg.pir_enabled; }
+export fn zigled_get_pir_gpio() u8 { return cfg.pir_gpio; }
 
 export fn zigled_start() void {
     loadStateFromNvs();
