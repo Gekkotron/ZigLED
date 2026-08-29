@@ -23,7 +23,7 @@ export default {
         identify(),
         light({
             color: {modes: ['xy']},
-            configureReporting: false,
+            configureReporting: true,
             effect: false,
             powerOnBehavior: false,
             endpointNames: ['light'],
