@@ -1,4 +1,5 @@
 #include "sensor.h"
+#include "esp_zb_endpoint.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
@@ -28,6 +29,8 @@ static void IRAM_ATTR gpio_isr(void *arg) {
 
 static void publish_occupancy(bool occupied) {
     s_occupied = occupied;
+    ESP_LOGI(TAG, "occupancy=%d", occupied);
+    if (!zigled_zb_connected()) return;
     uint8_t val = occupied ? 1 : 0;
     esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_zcl_set_attribute_val(
@@ -38,7 +41,6 @@ static void publish_occupancy(bool occupied) {
         &val,
         false);
     esp_zb_lock_release();
-    ESP_LOGI(TAG, "occupancy=%d", occupied);
 }
 
 static void unoccupied_timer_cb(TimerHandle_t xTimer) {
@@ -97,9 +99,6 @@ void zigled_sensor_init(uint8_t gpio, uint8_t endpoint_id, uint16_t default_dela
         isr_service_installed = true;
     }
     ESP_ERROR_CHECK(gpio_isr_handler_add(gpio, gpio_isr, NULL));
-
-    uint32_t initial = gpio_get_level(gpio);
-    if (s_task != NULL) xTaskNotify(s_task, initial, eSetValueWithOverwrite);
 
     ESP_LOGI(TAG, "PIR init gpio=%d ep=%d delay=%us", gpio, endpoint_id, default_delay_s);
 }
