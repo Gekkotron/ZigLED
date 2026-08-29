@@ -53,15 +53,16 @@ static void sensor_task(void *pv) {
     for (;;) {
         uint32_t level = 0;
         if (xTaskNotifyWait(0, 0xffffffff, &level, portMAX_DELAY) != pdTRUE) continue;
+        ESP_LOGI(TAG, "edge level=%u occupied=%d delay_s=%u", (unsigned)level, s_occupied, (unsigned)s_delay_s);
         if (level != 0) {
             if (xTimerIsTimerActive(s_timer) != pdFALSE) xTimerStop(s_timer, portMAX_DELAY);
             if (!s_occupied) publish_occupancy(true);
         } else {
             if (s_delay_s == 0) {
+                ESP_LOGW(TAG, "delay_s=0, publishing unoccupied immediately (set occupancy_timeout > 0 in Z2M)");
                 if (s_occupied) publish_occupancy(false);
             } else {
                 xTimerChangePeriod(s_timer, pdMS_TO_TICKS(s_delay_s * 1000), portMAX_DELAY);
-                xTimerReset(s_timer, portMAX_DELAY);
             }
         }
     }
@@ -70,7 +71,11 @@ static void sensor_task(void *pv) {
 void zigled_sensor_init(uint8_t gpio, uint8_t endpoint_id, uint16_t default_delay_s) {
     s_gpio = gpio;
     s_endpoint = endpoint_id;
-    s_delay_s = default_delay_s;
+    /* 0 means "publish false the moment the PIR line drops" per the ZCL
+       spec, which produces spike behavior most people don't want. Clamp
+       to at least 5 s at boot; user can lower back down explicitly via
+       the occupancy_timeout Z2M entity if they really want 0. */
+    s_delay_s = (default_delay_s == 0) ? 5 : default_delay_s;
 
     gpio_config_t io = {
         .pin_bit_mask = 1ULL << gpio,
