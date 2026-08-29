@@ -125,7 +125,6 @@ fn renderTask(_: ?*anyopaque) callconv(.c) void {
             effect_engine.render(cfg, &g_state, now, &g_fb);
         }
         g_pp.applyBrightness(&g_fb, g_state.level);
-        g_pp.applyGamma(&g_fb);
         g_pp.identifyOverlay(&g_fb, now);
         g_pp.commissioningHint(&g_fb, now);
         g_pp.encode(&g_fb, &buf);

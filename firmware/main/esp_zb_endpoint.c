@@ -19,8 +19,11 @@ static volatile bool s_connected = false;
 bool zigled_zb_connected(void) { return s_connected; }
 
 static esp_err_t esp_zb_action_handler(esp_zb_core_action_callback_id_t id, const void *msg) {
+    ESP_LOGI(TAG, "action id=0x%x", id);
     if (id != ESP_ZB_CORE_SET_ATTR_VALUE_CB_ID) return ESP_OK;
     const esp_zb_zcl_set_attr_value_message_t *m = msg;
+    ESP_LOGI(TAG, "set_attr ep=%d cluster=0x%04x attr=0x%04x type=0x%x",
+        m->info.dst_endpoint, m->info.cluster, m->attribute.id, m->attribute.data.type);
     switch (m->info.cluster) {
         case ESP_ZB_ZCL_CLUSTER_ID_ON_OFF:
             if (m->attribute.id == ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID)
@@ -44,12 +47,16 @@ static esp_err_t esp_zb_action_handler(esp_zb_core_action_callback_id_t id, cons
                 zigled_on_identify(*(uint16_t *)m->attribute.data.value);
             break;
         case MFG_CLUSTER_ID:
+            ESP_LOGI(TAG, "mfg cluster write attr=0x%04x", m->attribute.id);
             switch (m->attribute.id) {
                 case 0x0000: zigled_on_mfg_effect(*(uint16_t *)m->attribute.data.value); break;
                 case 0x0001: zigled_on_mfg_speed(*(uint8_t *)m->attribute.data.value); break;
                 case 0x0002: zigled_on_mfg_intensity(*(uint8_t *)m->attribute.data.value); break;
                 case 0x0003: zigled_on_mfg_palette(*(uint8_t *)m->attribute.data.value); break;
             }
+            break;
+        default:
+            ESP_LOGW(TAG, "unhandled cluster 0x%04x", m->info.cluster);
             break;
     }
     return ESP_OK;
@@ -156,6 +163,7 @@ static void sync_attrs_from_nvs(void) {
 }
 
 static void esp_zb_task(void *pv) {
+    ESP_LOGI(TAG, "esp_zb_task started");
     esp_zb_cfg_t zb_cfg = {
         .esp_zb_role = ESP_ZB_DEVICE_TYPE_ROUTER,
         .install_code_policy = false,
@@ -179,9 +187,11 @@ static void esp_zb_task(void *pv) {
     esp_zb_ep_list_add_ep(ep_list, cluster_list, ep_cfg);
     esp_zb_device_register(ep_list);
 
-    esp_zb_set_primary_network_channel_set(ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK);
+    esp_zb_set_primary_network_channel_set(1u << 15);
     esp_zb_core_action_handler_register(esp_zb_action_handler);
+    ESP_LOGI(TAG, "esp_zb_start (autostart=false)");
     ESP_ERROR_CHECK(esp_zb_start(false));
+    ESP_LOGI(TAG, "esp_zb_stack_main_loop entering");
     esp_zb_stack_main_loop();
 }
 
@@ -191,12 +201,14 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
     esp_zb_app_signal_type_t sig_type = *p_sg_p;
     switch (sig_type) {
         case ESP_ZB_ZDO_SIGNAL_SKIP_STARTUP:
+            ESP_LOGI(TAG, "SKIP_STARTUP -> BDB initialization");
             esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_INITIALIZATION);
             break;
         case ESP_ZB_BDB_SIGNAL_DEVICE_FIRST_START:
         case ESP_ZB_BDB_SIGNAL_DEVICE_REBOOT:
             if (err_status == ESP_OK) {
                 if (esp_zb_bdb_is_factory_new()) {
+                    ESP_LOGI(TAG, "factory new, starting network steering");
                     esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
                 } else {
                     s_connected = true;
@@ -204,6 +216,8 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
                     sync_attrs_from_nvs();
                     ESP_LOGI(TAG, "rejoined network");
                 }
+            } else {
+                ESP_LOGE(TAG, "BDB start failed: %s", esp_err_to_name(err_status));
             }
             break;
         case ESP_ZB_BDB_SIGNAL_STEERING:
@@ -211,16 +225,21 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
                 s_connected = true;
                 zigled_zb_set_connected(true);
                 sync_attrs_from_nvs();
-                ESP_LOGI(TAG, "joined network");
+                ESP_LOGI(TAG, "joined network (channel=%d, pan=0x%04x)",
+                    esp_zb_get_current_channel(), esp_zb_get_pan_id());
             } else {
+                ESP_LOGW(TAG, "steering failed (%s), retry in 1s", esp_err_to_name(err_status));
                 esp_zb_scheduler_alarm((esp_zb_callback_t)esp_zb_bdb_start_top_level_commissioning, ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);
             }
             break;
         case ESP_ZB_ZDO_SIGNAL_LEAVE:
+            ESP_LOGI(TAG, "LEAVE signal");
             s_connected = false;
             zigled_zb_set_connected(false);
             break;
         default:
+            ESP_LOGI(TAG, "signal 0x%x status=%s",
+                sig_type, esp_err_to_name(err_status));
             break;
     }
 }

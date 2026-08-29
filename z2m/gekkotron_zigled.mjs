@@ -1,4 +1,4 @@
-import {light, identify, numeric, enumLookup} from 'zigbee-herdsman-converters/lib/modernExtend';
+import {light, identify, numeric, enumLookup, deviceEndpoints} from 'zigbee-herdsman-converters/lib/modernExtend';
 
 const MFG_CLUSTER = 0xFC01;
 const MFG_CODE = 0x1337;
@@ -14,12 +14,17 @@ export default {
     vendor: 'Gekkotron',
     description: 'Zigbee WS28xx LED controller on ESP32-C6',
     extend: [
+        deviceEndpoints({
+            endpoints: {light: 1},
+            multiEndpointSkip: ['state', 'brightness', 'color', 'color_mode', 'color_xy', 'color_temp'],
+        }),
         identify(),
         light({
             color: {modes: ['xy']},
-            configureReporting: true,
+            configureReporting: false,
             effect: false,
             powerOnBehavior: false,
+            endpointNames: ['light'],
         }),
         enumLookup({
             name: 'effect',
@@ -27,7 +32,6 @@ export default {
             attribute: {ID: 0x0000, type: 0x21},
             lookup: effectList,
             description: 'Local effect to render',
-            zigbeeCommandOptions: {manufacturerCode: MFG_CODE},
         }),
         numeric({
             name: 'effect_speed',
@@ -35,7 +39,6 @@ export default {
             attribute: {ID: 0x0001, type: 0x20},
             valueMin: 0, valueMax: 255, valueStep: 1,
             description: 'Effect speed',
-            zigbeeCommandOptions: {manufacturerCode: MFG_CODE},
         }),
         numeric({
             name: 'effect_intensity',
@@ -43,7 +46,6 @@ export default {
             attribute: {ID: 0x0002, type: 0x20},
             valueMin: 0, valueMax: 255, valueStep: 1,
             description: 'Effect intensity',
-            zigbeeCommandOptions: {manufacturerCode: MFG_CODE},
         }),
         numeric({
             name: 'palette',
@@ -51,24 +53,6 @@ export default {
             attribute: {ID: 0x0003, type: 0x20},
             valueMin: 0, valueMax: 7, valueStep: 1,
             description: '0 = commanded color; 1..7 = built-in palettes',
-            zigbeeCommandOptions: {manufacturerCode: MFG_CODE},
-        }),
-        numeric({
-            name: 'pixel_count',
-            cluster: MFG_CLUSTER,
-            attribute: {ID: 0x0006, type: 0x21},
-            access: 'STATE_GET',
-            description: 'Number of LEDs',
-            zigbeeCommandOptions: {manufacturerCode: MFG_CODE},
-        }),
-        enumLookup({
-            name: 'layout_kind',
-            cluster: MFG_CLUSTER,
-            attribute: {ID: 0x0007, type: 0x30},
-            lookup: {strip: 0, serpentine: 1, panels: 2, custom: 3},
-            access: 'STATE_GET',
-            description: 'LED layout',
-            zigbeeCommandOptions: {manufacturerCode: MFG_CODE},
         }),
     ],
 };
