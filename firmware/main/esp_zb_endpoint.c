@@ -202,26 +202,20 @@ static void esp_zb_task(void *pv) {
     esp_zb_attribute_list_t *ident_s = esp_zb_identify_cluster_create(NULL);
     esp_zb_cluster_list_add_identify_cluster(sensor_list, ident_s, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
 
-    esp_zb_attribute_list_t *occ_attrs = esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_OCCUPANCY_SENSING);
-    static uint8_t occ_default = 0;
-    static uint8_t occ_type_pir = 0;
+    esp_zb_occupancy_sensing_cluster_cfg_t occ_cfg = {
+        .occupancy = 0,
+        .sensor_type = 0,          /* 0 = PIR */
+        .sensor_type_bitmap = 1,   /* bit 0 = PIR */
+    };
+    esp_zb_attribute_list_t *occ_attrs = esp_zb_occupancy_sensing_cluster_create(&occ_cfg);
     static uint16_t occ_delay_default = 60;
-    esp_zb_custom_cluster_add_custom_attr(occ_attrs,
-        ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_OCCUPANCY_ID,
-        ESP_ZB_ZCL_ATTR_TYPE_8BITMAP,
-        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
-        &occ_default);
-    esp_zb_custom_cluster_add_custom_attr(occ_attrs,
-        ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_OCCUPANCY_SENSOR_TYPE_ID,
-        ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM,
-        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
-        &occ_type_pir);
-    esp_zb_custom_cluster_add_custom_attr(occ_attrs,
+    esp_zb_cluster_add_attr(occ_attrs,
+        ESP_ZB_ZCL_CLUSTER_ID_OCCUPANCY_SENSING,
         ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_PIR_OCC_TO_UNOCC_DELAY_ID,
         ESP_ZB_ZCL_ATTR_TYPE_U16,
         ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE,
         &occ_delay_default);
-    esp_zb_cluster_list_add_custom_cluster(sensor_list, occ_attrs, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+    esp_zb_cluster_list_add_occupancy_sensing_cluster(sensor_list, occ_attrs, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
 
     esp_zb_endpoint_config_t sensor_ep_cfg = {
         .endpoint = EP_ID_SENSOR,
