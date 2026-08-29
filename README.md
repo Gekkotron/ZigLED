@@ -43,7 +43,3 @@ external_converters:
 ```
 
 Restart Zigbee2MQTT and pair the device — it appears as `Gekkotron ZigLED-1` with the standard light controls plus dropdowns/sliders for effect, palette, speed, and intensity.
-
-## Reference prototype
-
-The `zb_ws2815_c6/` directory and `zb_ws2815.mjs` are the Arduino/FastLED prototype and its converter. They are kept in-tree as reference for effect tuning (fire zones, phase-step scaling) and are not built by this project.

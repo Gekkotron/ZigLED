@@ -36,12 +36,22 @@ var g_reset_triggered: bool = false;
 
 fn loadStateFromNvs() void {
     var handle: led_output_c.nvs_handle_t = 0;
-    if (led_output_c.nvs_open("zigled", led_output_c.NVS_READONLY, &handle) != led_output_c.ESP_OK) return;
+    if (led_output_c.nvs_open("zigled", led_output_c.NVS_READONLY, &handle) != led_output_c.ESP_OK) {
+        g_state.on = false;
+        return;
+    }
     defer led_output_c.nvs_close(handle);
     var size: usize = persistence.SERIALIZED_SIZE;
     var buf: [persistence.SERIALIZED_SIZE]u8 = undefined;
-    if (led_output_c.nvs_get_blob(handle, "state", &buf, &size) != led_output_c.ESP_OK) return;
-    if (persistence.decode(&buf)) |st| g_state = st;
+    if (led_output_c.nvs_get_blob(handle, "state", &buf, &size) != led_output_c.ESP_OK) {
+        g_state.on = false;
+        return;
+    }
+    if (persistence.decode(&buf)) |st| {
+        g_state = st;
+    } else {
+        g_state.on = false;
+    }
 }
 
 fn saveStateToNvs() void {
