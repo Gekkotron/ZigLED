@@ -43,7 +43,25 @@ static void publish_occupancy(bool occupied) {
         ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_OCCUPANCY_ID,   /* 0x0000 */
         &val,
         true);   /* check_change=true so a report fires when it flips */
+
+    /* Also fire an explicit Report Attributes command to the coordinator,
+       so Z2M sees the change even when the SDK's reporting_info table
+       has no entry for this attribute (which happens when Z2M's
+       occupancy() modernExtend doesn't run ConfigureReporting for us). */
+    esp_zb_zcl_report_attr_cmd_t report = {
+        .zcl_basic_cmd = {
+            .dst_addr_u.addr_short = 0x0000,   /* coordinator */
+            .dst_endpoint = 1,
+            .src_endpoint = s_endpoint,
+        },
+        .address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
+        .clusterID = ESP_ZB_ZCL_CLUSTER_ID_OCCUPANCY_SENSING,
+        .direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_CLI,
+        .attributeID = ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_OCCUPANCY_ID,
+    };
+    esp_zb_zcl_report_attr_cmd_req(&report);
     esp_zb_lock_release();
+    ESP_LOGI(TAG, "explicit Report Attributes sent to coordinator (val=%d)", val);
 }
 
 static void unoccupied_timer_cb(TimerHandle_t xTimer) {
