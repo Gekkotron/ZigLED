@@ -107,11 +107,17 @@ static void register_mfg_cluster(esp_zb_cluster_list_t *cluster_list) {
 static void override_basic_identity(esp_zb_cluster_list_t *cluster_list) {
     esp_zb_attribute_list_t *basic_cluster = esp_zb_cluster_list_get_cluster(
         cluster_list, ESP_ZB_ZCL_CLUSTER_ID_BASIC, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
-    esp_zb_cluster_update_attr(basic_cluster,
+    esp_zb_cluster_add_attr(basic_cluster,
+        ESP_ZB_ZCL_CLUSTER_ID_BASIC,
         ESP_ZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_CHAR_STRING,
+        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
         (void *)"\x09Gekkotron");
-    esp_zb_cluster_update_attr(basic_cluster,
+    esp_zb_cluster_add_attr(basic_cluster,
+        ESP_ZB_ZCL_CLUSTER_ID_BASIC,
         ESP_ZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_CHAR_STRING,
+        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
         (void *)"\x08ZigLED-1");
 }
 
