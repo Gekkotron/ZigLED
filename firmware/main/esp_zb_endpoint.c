@@ -1,6 +1,8 @@
 #include "esp_zb_endpoint.h"
 #include "esp_zigbee_core.h"
 #include "ha/esp_zigbee_ha_standard.h"
+#include "nwk/esp_zigbee_nwk.h"
+#include "zdo/esp_zigbee_zdo_common.h"
 #include "esp_log.h"
 #include "esp_check.h"
 #include "nvs_flash.h"
@@ -160,9 +162,37 @@ static void report_light_state_to_coordinator(void) {
             .direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_CLI,
             .attributeID = light_attrs[i][1],
         };
-        esp_zb_zcl_report_attr_cmd_req(&r);
+        esp_err_t rc = esp_zb_zcl_report_attr_cmd_req(&r);
+        if (rc != ESP_OK) {
+            ESP_LOGW(TAG, "on-join report cluster=0x%04x attr=0x%04x FAILED rc=%s",
+                     light_attrs[i][0], light_attrs[i][1], esp_err_to_name(rc));
+        }
     }
     ESP_LOGI(TAG, "on-join Report Attributes sent for light state (on/off, level, color x/y)");
+}
+
+static const char *nlme_status_name(uint8_t s) {
+    switch (s) {
+        case ESP_ZB_NWK_COMMAND_STATUS_NO_ROUTE_AVAILABLE:          return "NO_ROUTE_AVAILABLE";
+        case ESP_ZB_NWK_COMMAND_STATUS_TREE_LINK_FAILURE:           return "TREE_LINK_FAILURE";
+        case ESP_ZB_NWK_COMMAND_STATUS_NONE_TREE_LINK_FAILURE:      return "NONE_TREE_LINK_FAILURE";
+        case ESP_ZB_NWK_COMMAND_STATUS_LOW_BATTERY_LEVEL:           return "LOW_BATTERY_LEVEL";
+        case ESP_ZB_NWK_COMMAND_STATUS_NO_ROUTING_CAPACITY:         return "NO_ROUTING_CAPACITY";
+        case ESP_ZB_NWK_COMMAND_STATUS_NO_INDIRECT_CAPACITY:        return "NO_INDIRECT_CAPACITY";
+        case ESP_ZB_NWK_COMMAND_STATUS_INDIRECT_TRANSACTION_EXPIRY: return "INDIRECT_TRANSACTION_EXPIRY";
+        case ESP_ZB_NWK_COMMAND_STATUS_TARGET_DEVICE_UNAVAILABLE:   return "TARGET_DEVICE_UNAVAILABLE";
+        case ESP_ZB_NWK_COMMAND_STATUS_TARGET_ADDRESS_UNALLOCATED:  return "TARGET_ADDRESS_UNALLOCATED";
+        case ESP_ZB_NWK_COMMAND_STATUS_PARENT_LINK_FAILURE:         return "PARENT_LINK_FAILURE";
+        case ESP_ZB_NWK_COMMAND_STATUS_VALIDATE_ROUTE:              return "VALIDATE_ROUTE";
+        case ESP_ZB_NWK_COMMAND_STATUS_SOURCE_ROUTE_FAILURE:        return "SOURCE_ROUTE_FAILURE";
+        case ESP_ZB_NWK_COMMAND_STATUS_MANY_TO_ONE_ROUTE_FAILURE:   return "MANY_TO_ONE_ROUTE_FAILURE";
+        case ESP_ZB_NWK_COMMAND_STATUS_ADDRESS_CONFLICT:            return "ADDRESS_CONFLICT";
+        case ESP_ZB_NWK_COMMAND_STATUS_VERIFY_ADDRESS:              return "VERIFY_ADDRESS";
+        case ESP_ZB_NWK_COMMAND_STATUS_PAN_IDENTIFIER_UPDATE:       return "PAN_IDENTIFIER_UPDATE";
+        case ESP_ZB_NWK_COMMAND_STATUS_NETWORK_ADDRESS_UPDATE:      return "NETWORK_ADDRESS_UPDATE";
+        case ESP_ZB_NWK_COMMAND_STATUS_BAD_FRAME_COUNTER:           return "BAD_FRAME_COUNTER";
+        default: return "?";
+    }
 }
 
 static void sync_attrs_from_nvs(void) {
@@ -316,6 +346,20 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
             s_connected = false;
             zigled_zb_set_connected(false);
             break;
+        case ESP_ZB_NLME_STATUS_INDICATION: {
+            /* Almost always about routes to OTHER devices (this router
+               being asked to forward). Decoded so it's clear it isn't our
+               own reports failing. */
+            esp_zb_zdo_signal_nwk_status_indication_params_t *p =
+                (esp_zb_zdo_signal_nwk_status_indication_params_t *)esp_zb_app_signal_get_params(p_sg_p);
+            if (p != NULL) {
+                ESP_LOGW(TAG, "NLME_STATUS_INDICATION status=0x%02x (%s) net_addr=0x%04x cmd_id=0x%02x",
+                    p->status, nlme_status_name(p->status), p->network_addr, p->unknown_command_id);
+            } else {
+                ESP_LOGW(TAG, "NLME_STATUS_INDICATION (no params)");
+            }
+            break;
+        }
         default:
             ESP_LOGI(TAG, "signal 0x%x status=%s",
                 sig_type, esp_err_to_name(err_status));

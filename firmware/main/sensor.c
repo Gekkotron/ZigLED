@@ -42,7 +42,7 @@ static void publish_occupancy(bool occupied) {
        the explicit Report Attributes below then ships that stale value.
        The device is the authoritative source of its own sensor reading,
        so bypassing the access check is correct. */
-    esp_zb_zcl_set_attribute_val(
+    esp_zb_zcl_status_t set_st = esp_zb_zcl_set_attribute_val(
         s_endpoint,
         ESP_ZB_ZCL_CLUSTER_ID_OCCUPANCY_SENSING,
         ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
@@ -65,9 +65,14 @@ static void publish_occupancy(bool occupied) {
         .direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_CLI,
         .attributeID = ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_OCCUPANCY_ID,
     };
-    esp_zb_zcl_report_attr_cmd_req(&report);
+    esp_err_t rep_rc = esp_zb_zcl_report_attr_cmd_req(&report);
     esp_zb_lock_release();
-    ESP_LOGI(TAG, "explicit Report Attributes sent to coordinator (val=%d)", val);
+    if (set_st != ESP_ZB_ZCL_STATUS_SUCCESS || rep_rc != ESP_OK) {
+        ESP_LOGW(TAG, "Report Attributes val=%d FAILED set_attr=0x%02x report_rc=%s",
+                 val, (unsigned)set_st, esp_err_to_name(rep_rc));
+    } else {
+        ESP_LOGI(TAG, "explicit Report Attributes sent to coordinator (val=%d)", val);
+    }
 }
 
 static void unoccupied_timer_cb(TimerHandle_t xTimer) {
