@@ -196,6 +196,8 @@ static const char *nlme_status_name(uint8_t s) {
         case ESP_ZB_NWK_COMMAND_STATUS_PAN_IDENTIFIER_UPDATE:       return "PAN_IDENTIFIER_UPDATE";
         case ESP_ZB_NWK_COMMAND_STATUS_NETWORK_ADDRESS_UPDATE:      return "NETWORK_ADDRESS_UPDATE";
         case ESP_ZB_NWK_COMMAND_STATUS_BAD_FRAME_COUNTER:           return "BAD_FRAME_COUNTER";
+        case ESP_ZB_NWK_COMMAND_STATUS_BAD_KEY_SEQUENCE_NUMBER:     return "BAD_KEY_SEQUENCE_NUMBER";
+        case ESP_ZB_NWK_COMMAND_STATUS_UNKNOWN_COMMAND:             return "UNKNOWN_COMMAND";
         default: return "?";
     }
 }
