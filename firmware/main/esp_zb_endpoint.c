@@ -239,6 +239,19 @@ static void sync_attrs_from_nvs(void) {
     }
 }
 
+/* Called by esp_zb_scheduler_alarm; the SDK's callback prototype takes a
+   uint8_t so we can't use sync_attrs_from_nvs directly. */
+static void deferred_sync_cb(uint8_t param) {
+    (void)param;
+    sync_attrs_from_nvs();
+}
+
+/* Delay chosen so a fresh interview (up to ~10 s of ZDO round-trips
+   including Simple_Desc_req per endpoint) can finish before we start
+   flooding the coordinator with Report Attributes commands. On rejoin
+   the interview is already cached so the wait is pure UI latency. */
+#define ZIGLED_JOIN_SYNC_DELAY_MS 12000
+
 static void esp_zb_task(void *pv) {
     ESP_LOGI(TAG, "esp_zb_task started");
     esp_zb_cfg_t zb_cfg = {
@@ -327,8 +340,9 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
                 } else {
                     s_connected = true;
                     zigled_zb_set_connected(true);
-                    sync_attrs_from_nvs();
-                    ESP_LOGI(TAG, "rejoined network");
+                    esp_zb_scheduler_alarm(deferred_sync_cb, 0, ZIGLED_JOIN_SYNC_DELAY_MS);
+                    ESP_LOGI(TAG, "rejoined network — sync scheduled in %d ms",
+                        ZIGLED_JOIN_SYNC_DELAY_MS);
                 }
             } else {
                 ESP_LOGE(TAG, "BDB start failed: %s", esp_err_to_name(err_status));
@@ -338,9 +352,10 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
             if (err_status == ESP_OK) {
                 s_connected = true;
                 zigled_zb_set_connected(true);
-                sync_attrs_from_nvs();
-                ESP_LOGI(TAG, "joined network (channel=%d, pan=0x%04x)",
-                    esp_zb_get_current_channel(), esp_zb_get_pan_id());
+                esp_zb_scheduler_alarm(deferred_sync_cb, 0, ZIGLED_JOIN_SYNC_DELAY_MS);
+                ESP_LOGI(TAG, "joined network (channel=%d, pan=0x%04x) — sync scheduled in %d ms",
+                    esp_zb_get_current_channel(), esp_zb_get_pan_id(),
+                    ZIGLED_JOIN_SYNC_DELAY_MS);
             } else {
                 ESP_LOGW(TAG, "steering failed (%s), retry in 1s", esp_err_to_name(err_status));
                 esp_zb_scheduler_alarm((esp_zb_callback_t)esp_zb_bdb_start_top_level_commissioning, ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);
