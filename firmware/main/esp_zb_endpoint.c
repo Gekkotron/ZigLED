@@ -246,6 +246,14 @@ static void deferred_sync_cb(uint8_t param) {
     sync_attrs_from_nvs();
 }
 
+/* Same reason as deferred_sync_cb: the commissioning entry point returns
+   esp_err_t, so it can't be cast to esp_zb_callback_t (void return)
+   without a -Wcast-function-type warning. The wrapper discards the
+   return value. */
+static void deferred_start_steering_cb(uint8_t param) {
+    (void)esp_zb_bdb_start_top_level_commissioning(param);
+}
+
 /* Delay chosen so a fresh interview (up to ~10 s of ZDO round-trips
    including Simple_Desc_req per endpoint) can finish before we start
    flooding the coordinator with Report Attributes commands. On rejoin
@@ -358,7 +366,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
                     ZIGLED_JOIN_SYNC_DELAY_MS);
             } else {
                 ESP_LOGW(TAG, "steering failed (%s), retry in 1s", esp_err_to_name(err_status));
-                esp_zb_scheduler_alarm((esp_zb_callback_t)esp_zb_bdb_start_top_level_commissioning, ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);
+                esp_zb_scheduler_alarm(deferred_start_steering_cb, ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);
             }
             break;
         case ESP_ZB_ZDO_SIGNAL_LEAVE:
