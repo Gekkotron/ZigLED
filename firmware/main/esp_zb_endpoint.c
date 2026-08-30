@@ -140,17 +140,22 @@ static void override_basic_identity(esp_zb_cluster_list_t *cluster_list) {
 }
 
 static void report_light_state_to_coordinator(void) {
-    /* Explicit Report Attributes for the light-endpoint attrs Z2M cares
-       about, so the coordinator learns the current state at (re)join
-       without waiting for a change or Read. Same pattern as the on-change
-       report in sensor.c. */
-    static const uint16_t light_attrs[][2] = {
+    /* Explicit Report Attributes for every endpoint-1 attribute Z2M cares
+       about — light state (on/off, level, color) and the ZigLED mfg
+       cluster (effect, speed, intensity, palette) — so the coordinator
+       learns the current values at (re)join without waiting for a change
+       or Read. Same pattern as the on-change report in sensor.c. */
+    static const uint16_t ep1_attrs[][2] = {
         {ESP_ZB_ZCL_CLUSTER_ID_ON_OFF,        ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID},
         {ESP_ZB_ZCL_CLUSTER_ID_LEVEL_CONTROL, ESP_ZB_ZCL_ATTR_LEVEL_CONTROL_CURRENT_LEVEL_ID},
         {ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL, ESP_ZB_ZCL_ATTR_COLOR_CONTROL_CURRENT_X_ID},
         {ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL, ESP_ZB_ZCL_ATTR_COLOR_CONTROL_CURRENT_Y_ID},
+        {MFG_CLUSTER_ID, 0x0000},   /* effect */
+        {MFG_CLUSTER_ID, 0x0001},   /* effect_speed */
+        {MFG_CLUSTER_ID, 0x0002},   /* effect_intensity */
+        {MFG_CLUSTER_ID, 0x0003},   /* palette */
     };
-    for (size_t i = 0; i < sizeof(light_attrs) / sizeof(light_attrs[0]); i++) {
+    for (size_t i = 0; i < sizeof(ep1_attrs) / sizeof(ep1_attrs[0]); i++) {
         esp_zb_zcl_report_attr_cmd_t r = {
             .zcl_basic_cmd = {
                 .dst_addr_u.addr_short = 0x0000,
@@ -158,17 +163,17 @@ static void report_light_state_to_coordinator(void) {
                 .src_endpoint = EP_ID,
             },
             .address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
-            .clusterID = light_attrs[i][0],
+            .clusterID = ep1_attrs[i][0],
             .direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_CLI,
-            .attributeID = light_attrs[i][1],
+            .attributeID = ep1_attrs[i][1],
         };
         esp_err_t rc = esp_zb_zcl_report_attr_cmd_req(&r);
         if (rc != ESP_OK) {
             ESP_LOGW(TAG, "on-join report cluster=0x%04x attr=0x%04x FAILED rc=%s",
-                     light_attrs[i][0], light_attrs[i][1], esp_err_to_name(rc));
+                     ep1_attrs[i][0], ep1_attrs[i][1], esp_err_to_name(rc));
         }
     }
-    ESP_LOGI(TAG, "on-join Report Attributes sent for light state (on/off, level, color x/y)");
+    ESP_LOGI(TAG, "on-join Report Attributes sent for endpoint-1 state (light + mfg cluster)");
 }
 
 static const char *nlme_status_name(uint8_t s) {
