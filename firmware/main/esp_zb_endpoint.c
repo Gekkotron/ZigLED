@@ -137,6 +137,34 @@ static void override_basic_identity(esp_zb_cluster_list_t *cluster_list) {
         (void *)"\x08ZigLED-1");
 }
 
+static void report_light_state_to_coordinator(void) {
+    /* Explicit Report Attributes for the light-endpoint attrs Z2M cares
+       about, so the coordinator learns the current state at (re)join
+       without waiting for a change or Read. Same pattern as the on-change
+       report in sensor.c. */
+    static const uint16_t light_attrs[][2] = {
+        {ESP_ZB_ZCL_CLUSTER_ID_ON_OFF,        ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID},
+        {ESP_ZB_ZCL_CLUSTER_ID_LEVEL_CONTROL, ESP_ZB_ZCL_ATTR_LEVEL_CONTROL_CURRENT_LEVEL_ID},
+        {ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL, ESP_ZB_ZCL_ATTR_COLOR_CONTROL_CURRENT_X_ID},
+        {ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL, ESP_ZB_ZCL_ATTR_COLOR_CONTROL_CURRENT_Y_ID},
+    };
+    for (size_t i = 0; i < sizeof(light_attrs) / sizeof(light_attrs[0]); i++) {
+        esp_zb_zcl_report_attr_cmd_t r = {
+            .zcl_basic_cmd = {
+                .dst_addr_u.addr_short = 0x0000,
+                .dst_endpoint = 1,
+                .src_endpoint = EP_ID,
+            },
+            .address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT,
+            .clusterID = light_attrs[i][0],
+            .direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_CLI,
+            .attributeID = light_attrs[i][1],
+        };
+        esp_zb_zcl_report_attr_cmd_req(&r);
+    }
+    ESP_LOGI(TAG, "on-join Report Attributes sent for light state (on/off, level, color x/y)");
+}
+
 static void sync_attrs_from_nvs(void) {
     bool on = zigled_get_on();
     uint8_t level = zigled_get_level();
@@ -168,7 +196,12 @@ static void sync_attrs_from_nvs(void) {
         ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 0x0002, &ins, false);
     esp_zb_zcl_set_attribute_val(EP_ID, MFG_CLUSTER_ID,
         ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 0x0003, &pal, false);
+    report_light_state_to_coordinator();
     esp_zb_lock_release();
+
+    if (zigled_get_pir_enabled()) {
+        zigled_sensor_republish_current();
+    }
 }
 
 static void esp_zb_task(void *pv) {

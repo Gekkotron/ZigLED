@@ -36,13 +36,19 @@ static void publish_occupancy(bool occupied) {
     }
     uint8_t val = occupied ? 1 : 0;
     esp_zb_lock_acquire(portMAX_DELAY);
+    /* check=false bypasses the ZCL access-flag check. Per the ZCL spec the
+       Occupancy attribute is READ_ONLY, so check=true makes the SDK reject
+       the write with status READ_ONLY (0x88) and leave the cache stale;
+       the explicit Report Attributes below then ships that stale value.
+       The device is the authoritative source of its own sensor reading,
+       so bypassing the access check is correct. */
     esp_zb_zcl_set_attribute_val(
         s_endpoint,
         ESP_ZB_ZCL_CLUSTER_ID_OCCUPANCY_SENSING,
         ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
         ESP_ZB_ZCL_ATTR_OCCUPANCY_SENSING_OCCUPANCY_ID,   /* 0x0000 */
         &val,
-        true);   /* check_change=true so a report fires when it flips */
+        false);
 
     /* Also fire an explicit Report Attributes command to the coordinator,
        so Z2M sees the change even when the SDK's reporting_info table
@@ -137,4 +143,9 @@ void zigled_sensor_set_unoccupied_delay_s(uint16_t delay_s) {
 
 bool zigled_sensor_get_occupied(void) {
     return s_occupied;
+}
+
+void zigled_sensor_republish_current(void) {
+    if (s_endpoint == 0) return;   /* PIR disabled or not yet inited */
+    publish_occupancy(s_occupied);
 }
