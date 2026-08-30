@@ -22,9 +22,17 @@ export default {
             effect: false,
             powerOnBehavior: false,
         }),
-        occupancy({
-            endpointNames: ['occupancy'],
-        }),
+        // Deliberately no endpointNames here: modernExtend's occupancy()
+        // uses postfixWithEndpointName in fromZigbee (emits bare "occupancy"
+        // when it does not consider the definition multi-endpoint) but
+        // .withEndpoint(ep) on the exposes, so mixing endpointNames with
+        // this single-endpoint occupancy cluster produces a mismatch
+        // between the state key ("occupancy") and the exposes property
+        // ("occupancy_occupancy") — Z2M's UI then shows N/A even though
+        // the value arrives correctly over MQTT. The device only reports
+        // occupancy on endpoint 2, so the bare fromZigbee still routes
+        // to the right property.
+        occupancy(),
         numeric({
             name: 'occupancy_timeout',
             cluster: 'msOccupancySensing',
