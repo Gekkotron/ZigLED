@@ -90,10 +90,16 @@ static void sensor_task(void *pv) {
             if (xTimerIsTimerActive(s_timer) != pdFALSE) xTimerStop(s_timer, portMAX_DELAY);
             if (!s_occupied) publish_occupancy(true);
         } else {
-            ESP_LOGI(TAG, "PIR input LOW (motion ended) — occupied=%d, will report unoccupied in %us", s_occupied, (unsigned)s_delay_s);
+            if (!s_occupied) {
+                /* PIR line went LOW while we're already unoccupied — the
+                   redundant edge doesn't need to schedule another report. */
+                ESP_LOGI(TAG, "PIR input LOW (motion ended) — already unoccupied, no report scheduled");
+                continue;
+            }
+            ESP_LOGI(TAG, "PIR input LOW (motion ended) — occupied=1, will report unoccupied in %us", (unsigned)s_delay_s);
             if (s_delay_s == 0) {
                 ESP_LOGW(TAG, "delay_s=0, publishing unoccupied immediately (set occupancy_timeout > 0 in Z2M)");
-                if (s_occupied) publish_occupancy(false);
+                publish_occupancy(false);
             } else {
                 xTimerChangePeriod(s_timer, pdMS_TO_TICKS(s_delay_s * 1000), portMAX_DELAY);
             }
