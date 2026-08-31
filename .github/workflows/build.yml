@@ -1,0 +1,120 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  zig-tests:
+    name: Zig unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+
+      - name: zig build test
+        working-directory: firmware/zig
+        run: zig build test
+
+  firmware:
+    name: Build firmware (ESP-IDF v5.3.2 · esp32c6)
+    needs: zig-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The espressif/esp-idf-ci-action runs `command:` inside the official
+      # espressif/idf docker image with ESP-IDF pre-installed and idf.py on
+      # PATH. It does NOT ship Zig, and the CMake build shells out to
+      # `zig build` (see firmware/main/CMakeLists.txt) — so we install Zig
+      # inside the container before invoking idf.py build.
+      - name: Build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.3.2
+          target: esp32c6
+          path: firmware
+          command: |
+            set -eu
+            apt-get update
+            apt-get install -y --no-install-recommends xz-utils curl ca-certificates zip
+            ZIG_VERSION=0.14.1
+            curl -fsSL -o /tmp/zig.tar.xz \
+              "https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
+            mkdir -p /opt/zig
+            tar -xJf /tmp/zig.tar.xz -C /opt/zig --strip-components=1
+            export PATH="/opt/zig:$PATH"
+            zig version
+            cd firmware
+            idf.py set-target esp32c6
+            idf.py build
+            idf.py size
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zigled-esp32c6-firmware
+          if-no-files-found: error
+          path: |
+            firmware/build/zigled.bin
+            firmware/build/zigled.elf
+            firmware/build/bootloader/bootloader.bin
+            firmware/build/partition_table/partition-table.bin
+            firmware/build/flasher_args.json
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: firmware
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: zigled-esp32c6-firmware
+          path: artifacts
+
+      - name: Package firmware bundle
+        run: |
+          set -eu
+          VERSION="${GITHUB_REF_NAME}"
+          BUNDLE="ZigLED-${VERSION}-esp32c6.zip"
+          (cd artifacts && zip -r "../${BUNDLE}" .)
+          echo "BUNDLE=${BUNDLE}" >> "$GITHUB_ENV"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.BUNDLE }}
+            artifacts/zigled.bin
+            artifacts/bootloader/bootloader.bin
+            artifacts/partition_table/partition-table.bin
+            artifacts/flasher_args.json
+          generate_release_notes: true
+          body: |
+            Prebuilt firmware for ESP32-C6, built from `${{ github.sha }}`.
+
+            ## Flash with esptool (offsets from partitions.csv)
+
+            ```bash
+            unzip ZigLED-${{ github.ref_name }}-esp32c6.zip -d fw
+            esptool.py -p /dev/tty.usbmodem* write_flash \
+              0x0     fw/bootloader/bootloader.bin \
+              0x8000  fw/partition_table/partition-table.bin \
+              0x10000 fw/zigled.bin
+            ```
+
+            Or with `idf.py` if you already have ESP-IDF v5.3.2 installed:
+
+            ```bash
+            idf.py -p /dev/tty.usbmodem* -B fw flash
+            ```
