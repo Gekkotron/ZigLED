@@ -27,55 +27,38 @@ jobs:
     name: Build firmware (ESP-IDF v5.3.2 · esp32c6)
     needs: zig-tests
     runs-on: ubuntu-latest
+    # Run the whole job inside the official ESP-IDF image, forced to root so
+    # apt-get / write access to /opt/esp works. This replaced an earlier
+    # espressif/esp-idf-ci-action@v1 step whose runtime user changed
+    # underneath us (apt-get lost root, then idf.py fell off PATH). Native
+    # `container:` gives us a stable, controllable environment; the ESP-IDF
+    # image's ENTRYPOINT still sources export.sh so idf.py is on PATH.
+    container:
+      image: espressif/idf:v5.3.2
+      options: --user root
     steps:
       - uses: actions/checkout@v4
 
-      # The espressif/esp-idf-ci-action runs `command:` inside the official
-      # espressif/idf docker image with ESP-IDF pre-installed and idf.py on
-      # PATH. It does NOT ship Zig, and the CMake build shells out to
-      # `zig build` (see firmware/main/CMakeLists.txt) — so we have to make
-      # Zig available inside the container. We install it on the host runner
-      # first (mlugg/setup-zig rotates through working mirrors) and copy the
-      # extracted toolchain into the workspace, which esp-idf-ci-action
-      # bind-mounts into the container. Direct download from ziglang.org
-      # inside the container reliably 404s against GitHub Actions IPs, and
-      # community mirrors weren't reliable either — this path avoids the
-      # network entirely at container time.
-      - name: Set up Zig on host
+      # The CMake build shells out to `zig build` (see
+      # firmware/main/CMakeLists.txt) but espressif/idf does not ship Zig,
+      # so install it into the container. mlugg/setup-zig rotates through
+      # working mirrors, side-stepping the ziglang.org 404s we saw when
+      # curling directly from GitHub Actions IPs.
+      - name: Install Zig
         uses: mlugg/setup-zig@v2
         with:
           version: 0.16.0
 
-      - name: Stage Zig into workspace for the ESP-IDF container
+      - name: Build
+        shell: bash
         run: |
           set -eu
-          ZIG_BIN=$(readlink -f "$(command -v zig)")
-          ZIG_DIR=$(dirname "$ZIG_BIN")
-          mkdir -p .zig-toolchain
-          cp -a "$ZIG_DIR"/. .zig-toolchain/
-          .zig-toolchain/zig version
-
-      - name: Build
-        uses: espressif/esp-idf-ci-action@v1
-        with:
-          esp_idf_version: v5.3.2
-          target: esp32c6
-          path: firmware
-          command: |
-            set -eu
-            # The container starts at the workspace root and `path: firmware`
-            # points idf.py at the project subdir. .zig-toolchain lives at
-            # the workspace root, so PATH is set before cd'ing into firmware.
-            # No apt-get needed — the previous version installed xz-utils /
-            # curl / ca-certificates to fetch Zig at container time, but Zig
-            # now comes pre-staged from the host, and the release-time zip
-            # runs in the release job on ubuntu-latest.
-            export PATH="$(pwd)/.zig-toolchain:$PATH"
-            zig version
-            cd firmware
-            idf.py set-target esp32c6
-            idf.py build
-            idf.py size
+          . /opt/esp/idf/export.sh
+          zig version
+          cd firmware
+          idf.py set-target esp32c6
+          idf.py build
+          idf.py size
 
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
