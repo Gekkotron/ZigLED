@@ -138,6 +138,15 @@ export fn zigled_next_command(out_tag: *u8, out_a: *u32, out_b: *u32) bool {
             out_a.* = v;
             out_b.* = 0;
         },
+        .set_active_count => |v| {
+            out_tag.* = 9;
+            out_a.* = v;
+            out_b.* = 0;
+        },
     }
     return true;
+}
+
+export fn zigled_on_mfg_active_count(v: u16) void {
+    _ = g_queue.tryPost(.{ .set_active_count = v });
 }

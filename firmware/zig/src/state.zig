@@ -10,6 +10,12 @@ pub const EngineState = struct {
     effect_intensity: u8 = 128,
     palette_id: u8 = 0,
     pir_unoccupied_delay_s: u16 = 60,
+    // Runtime cap on how many LEDs the effect actually paints. The
+    // framebuffer stays sized at cfg.count (buffers, RMT, and DMA are
+    // built for it), but pixels [active_count..cfg.count) are zeroed
+    // each frame, so the strip's tail stays dark. maxInt means "unset
+    // → treat as full length".
+    active_count: u16 = std.math.maxInt(u16),
 };
 
 pub const defaults: EngineState = .{};
@@ -23,6 +29,7 @@ pub const Command = union(enum) {
     set_intensity: u8,
     set_palette: u8,
     identify: u16,
+    set_active_count: u16,
 };
 
 pub fn apply(state: *EngineState, cmd: Command) bool {
@@ -58,6 +65,10 @@ pub fn apply(state: *EngineState, cmd: Command) bool {
         },
         .identify => {
             return false;
+        },
+        .set_active_count => |v| {
+            state.active_count = v;
+            return true;
         },
     }
 }

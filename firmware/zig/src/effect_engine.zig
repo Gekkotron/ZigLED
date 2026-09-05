@@ -67,4 +67,10 @@ pub fn render(comptime cfg: config.LedConfig, state: *const st.EngineState, t_ms
     const list = effects(cfg);
     const id: usize = if (state.effect_id < list.len) state.effect_id else 0;
     list[id].render(state, t_ms, fb);
+    // Runtime cap: keep the framebuffer's tail dark past active_count.
+    // Effects render across the full comptime-sized buffer; this zeros
+    // any pixels the user has excluded via the runtime knob.
+    const active: u32 = @min(@as(u32, state.active_count), @as(u32, cfg.count));
+    var i: u32 = active;
+    while (i < cfg.count) : (i += 1) fb.linear[i] = .{};
 }

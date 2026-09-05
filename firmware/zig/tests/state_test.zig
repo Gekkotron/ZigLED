@@ -34,3 +34,14 @@ test "apply set_color_xy updates both" {
     try std.testing.expectEqual(@as(u16, 40000), st.color_x);
     try std.testing.expectEqual(@as(u16, 20000), st.color_y);
 }
+
+test "defaults active_count is maxInt(u16) meaning full strip" {
+    try std.testing.expectEqual(@as(u16, std.math.maxInt(u16)), s.defaults.active_count);
+}
+
+test "apply set_active_count updates and marks dirty" {
+    var st = s.defaults;
+    const dirty = s.apply(&st, .{ .set_active_count = 77 });
+    try std.testing.expectEqual(true, dirty);
+    try std.testing.expectEqual(@as(u16, 77), st.active_count);
+}

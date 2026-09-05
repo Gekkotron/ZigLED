@@ -71,5 +71,13 @@ export default {
             valueMin: 0, valueMax: 7, valueStep: 1,
             description: '0 = commanded color; 1..7 = built-in palettes',
         }),
+        numeric({
+            name: 'active_count',
+            cluster: MFG_CLUSTER,
+            attribute: {ID: 0x000A, type: 0x21},
+            valueMin: 0, valueMax: 65535, valueStep: 1,
+            unit: 'LEDs',
+            description: 'Runtime cap on lit LEDs. Pixels past this stay dark; the physical count baked at build time is the ceiling.',
+        }),
     ],
 };

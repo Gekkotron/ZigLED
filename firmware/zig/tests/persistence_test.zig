@@ -12,6 +12,14 @@ test "encode-decode round trip" {
     try std.testing.expectEqual(st, decoded);
 }
 
+test "encode-decode round trip preserves active_count" {
+    var st = s.defaults;
+    st.active_count = 88;
+    const bytes = p.encode(st);
+    const decoded = p.decode(&bytes) orelse unreachable;
+    try std.testing.expectEqual(@as(u16, 88), decoded.active_count);
+}
+
 test "decode wrong length returns null" {
     const bytes = [_]u8{0} ** 8;
     try std.testing.expectEqual(@as(?s.EngineState, null), p.decode(&bytes));

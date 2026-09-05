@@ -78,6 +78,7 @@ fn drainCommands() void {
             6 => .{ .set_intensity = @intCast(a & 0xFF) },
             7 => .{ .set_palette = @intCast(a & 0xFF) },
             8 => .{ .identify = @intCast(a & 0xFFFF) },
+            9 => .{ .set_active_count = @intCast(a & 0xFFFF) },
             else => continue,
         };
         const dirty = state.apply(&g_state, cmd);
@@ -159,6 +160,14 @@ export fn zigled_get_effect_speed() u8 { return g_state.effect_speed; }
 export fn zigled_get_effect_intensity() u8 { return g_state.effect_intensity; }
 export fn zigled_get_palette_id() u8 { return g_state.palette_id; }
 export fn zigled_get_pir_unoccupied_delay_s() u16 { return g_state.pir_unoccupied_delay_s; }
+export fn zigled_get_active_count() u16 {
+    // Return the physical cap when the persisted value is the "unset"
+    // sentinel or exceeds the built-for capacity, so the coordinator
+    // always sees a real, usable count.
+    const v: u32 = @as(u32, g_state.active_count);
+    const capped: u32 = @min(v, @as(u32, cfg.count));
+    return @intCast(capped);
+}
 export fn zigled_set_pir_unoccupied_delay_s(v: u16) void {
     g_state.pir_unoccupied_delay_s = v;
     g_debouncer.markDirty(nowMs());

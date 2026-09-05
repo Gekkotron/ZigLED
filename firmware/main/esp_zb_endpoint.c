@@ -57,6 +57,7 @@ static esp_err_t esp_zb_action_handler(esp_zb_core_action_callback_id_t id, cons
                 case 0x0001: zigled_on_mfg_speed(*(uint8_t *)m->attribute.data.value); break;
                 case 0x0002: zigled_on_mfg_intensity(*(uint8_t *)m->attribute.data.value); break;
                 case 0x0003: zigled_on_mfg_palette(*(uint8_t *)m->attribute.data.value); break;
+                case 0x000A: zigled_on_mfg_active_count(*(uint16_t *)m->attribute.data.value); break;
             }
             break;
         case ESP_ZB_ZCL_CLUSTER_ID_OCCUPANCY_SENSING:
@@ -85,6 +86,7 @@ static void register_mfg_cluster(esp_zb_cluster_list_t *cluster_list) {
     static uint8_t  layout_kind_default = 0;    // strip
     static uint16_t layout_width_default = 0;
     static uint16_t layout_height_default = 0;
+    static uint16_t active_count_default = 120;   /* physical cap; sync pushes real value at join */
 
     esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0000,
         ESP_ZB_ZCL_ATTR_TYPE_U16,
@@ -117,6 +119,10 @@ static void register_mfg_cluster(esp_zb_cluster_list_t *cluster_list) {
     esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x0009,
         ESP_ZB_ZCL_ATTR_TYPE_U16, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,
         &layout_height_default);
+    esp_zb_custom_cluster_add_custom_attr(mfg_attr_list, 0x000A,
+        ESP_ZB_ZCL_ATTR_TYPE_U16,
+        ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &active_count_default);
 
     esp_zb_cluster_list_add_custom_cluster(cluster_list, mfg_attr_list,
         ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
@@ -154,6 +160,16 @@ static void report_light_state_to_coordinator(void) {
         {MFG_CLUSTER_ID, 0x0001},   /* effect_speed */
         {MFG_CLUSTER_ID, 0x0002},   /* effect_intensity */
         {MFG_CLUSTER_ID, 0x0003},   /* palette */
+        /* 0x000A active_count is NOT pushed on-join: the SDK's
+           esp_zb_zcl_report_attr_cmd_req asserts when the reporting_info
+           table lacks an entry for a manufacturer-cluster attribute,
+           which happens for any attribute that was added AFTER the
+           coordinator's last ConfigureReporting round for this device.
+           The value is still written to the ZCL attribute cache in
+           sync_attrs_from_nvs above, so Z2M reads it on-demand and the
+           entity populates on next interview. Re-pairing the device
+           lets Z2M configure reporting for it and this line can be
+           re-enabled at that point. */
     };
     for (size_t i = 0; i < sizeof(ep1_attrs) / sizeof(ep1_attrs[0]); i++) {
         esp_zb_zcl_report_attr_cmd_t r = {
@@ -211,6 +227,7 @@ static void sync_attrs_from_nvs(void) {
     uint8_t spd = zigled_get_effect_speed();
     uint8_t ins = zigled_get_effect_intensity();
     uint8_t pal = zigled_get_palette_id();
+    uint16_t acnt = zigled_get_active_count();
 
     esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_zcl_set_attribute_val(EP_ID, ESP_ZB_ZCL_CLUSTER_ID_ON_OFF,
@@ -233,6 +250,8 @@ static void sync_attrs_from_nvs(void) {
         ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 0x0002, &ins, false);
     esp_zb_zcl_set_attribute_val(EP_ID, MFG_CLUSTER_ID,
         ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 0x0003, &pal, false);
+    esp_zb_zcl_set_attribute_val(EP_ID, MFG_CLUSTER_ID,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 0x000A, &acnt, false);
     report_light_state_to_coordinator();
     esp_zb_lock_release();
 
