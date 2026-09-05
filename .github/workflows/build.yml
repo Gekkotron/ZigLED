@@ -48,8 +48,14 @@ jobs:
             ZIG_VERSION=0.16.0
             # Zig's tarball naming flipped at 0.14.1: 0.14.0 and older were
             # zig-linux-x86_64-<v>.tar.xz, 0.14.1+ are zig-x86_64-linux-<v>.tar.xz.
+            # ziglang.org occasionally 404s against GitHub Actions IPs (rate
+            # limiting) — fall back to a community mirror so the build stays
+            # deterministic.
+            ZIG_BASENAME="zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
             curl -fsSL -o /tmp/zig.tar.xz \
-              "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+              "https://ziglang.org/download/${ZIG_VERSION}/${ZIG_BASENAME}" \
+              || curl -fsSL -o /tmp/zig.tar.xz \
+              "https://pkg.machengine.org/zig/${ZIG_BASENAME}"
             mkdir -p /opt/zig
             tar -xJf /tmp/zig.tar.xz -C /opt/zig --strip-components=1
             export PATH="/opt/zig:$PATH"
