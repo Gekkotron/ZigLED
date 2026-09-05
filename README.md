@@ -12,7 +12,7 @@ By Gekkotron.
 
 ## Prerequisites
 
-- Zig ≥ 0.14.0 (tested with 0.16.0 via Homebrew)
+- Zig ≥ 0.15.0 (tested with 0.16.0 via Homebrew) — `build.zig` uses the new `Io`-based build APIs (`std.Io.Dir`, `b.graph.io`) introduced in 0.15
 - ESP-IDF v5.3.2 (installed via `install.sh` in the repo root, or manually — see `install.sh` for the exact commands)
 - ESP-Zigbee-SDK ≥ v1.6 (pulled by `firmware/main/idf_component.yml`)
 - Zigbee2MQTT ≥ 1.35 for the external converter
