@@ -66,8 +66,10 @@ jobs:
             # The container starts at the workspace root and `path: firmware`
             # points idf.py at the project subdir. .zig-toolchain lives at
             # the workspace root, so PATH is set before cd'ing into firmware.
-            apt-get update
-            apt-get install -y --no-install-recommends zip
+            # No apt-get needed — the previous version installed xz-utils /
+            # curl / ca-certificates to fetch Zig at container time, but Zig
+            # now comes pre-staged from the host, and the release-time zip
+            # runs in the release job on ubuntu-latest.
             export PATH="$(pwd)/.zig-toolchain:$PATH"
             zig version
             cd firmware
