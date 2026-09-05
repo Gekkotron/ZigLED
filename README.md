@@ -21,9 +21,13 @@ By Gekkotron.
 
 ```bash
 cd firmware
-idf.py set-target esp32c6
-idf.py build
-idf.py -p /dev/tty.usbmodem* flash monitor
+idf.py set-target esp32c6 && idf.py build && idf.py -p /dev/tty.usbmodem* flash monitor
+```
+
+Exit the serial monitor with `Ctrl+]`, or from another terminal:
+
+```bash
+pkill -f "idf_monitor"
 ```
 
 ## Run host unit tests
