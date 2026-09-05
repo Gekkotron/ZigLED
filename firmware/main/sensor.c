@@ -125,7 +125,7 @@ void zigled_sensor_init(uint8_t gpio, uint8_t endpoint_id, uint16_t default_dela
     };
     ESP_ERROR_CHECK(gpio_config(&io));
 
-    s_timer = xTimerCreate("pir_off", pdMS_TO_TICKS((TickType_t)default_delay_s * 1000),
+    s_timer = xTimerCreate("pir_off", pdMS_TO_TICKS((TickType_t)s_delay_s * 1000),
                            pdFALSE, NULL, unoccupied_timer_cb);
     if (s_timer == NULL) {
         ESP_LOGE(TAG, "xTimerCreate failed");
