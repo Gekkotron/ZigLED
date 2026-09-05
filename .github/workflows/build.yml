@@ -17,7 +17,7 @@ jobs:
 
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.1
+          version: 0.16.0
 
       - name: zig build test
         working-directory: firmware/zig
@@ -45,9 +45,11 @@ jobs:
             set -eu
             apt-get update
             apt-get install -y --no-install-recommends xz-utils curl ca-certificates zip
-            ZIG_VERSION=0.14.1
+            ZIG_VERSION=0.16.0
+            # Zig's tarball naming flipped at 0.14.1: 0.14.0 and older were
+            # zig-linux-x86_64-<v>.tar.xz, 0.14.1+ are zig-x86_64-linux-<v>.tar.xz.
             curl -fsSL -o /tmp/zig.tar.xz \
-              "https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
+              "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
             mkdir -p /opt/zig
             tar -xJf /tmp/zig.tar.xz -C /opt/zig --strip-components=1
             export PATH="/opt/zig:$PATH"
