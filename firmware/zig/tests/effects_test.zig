@@ -93,3 +93,37 @@ test "fire_1d produces warm colors on strip" {
     for (fb.linear) |p| if (p.r > p.b) { warmish += 1; };
     try std.testing.expect(warmish >= cfg.count / 2);
 }
+
+test "plasma_2d varies pixels across strip with palette_id=0" {
+    var fb = fbm.FrameBuffer(cfg){};
+    var s = st_mod.defaults;
+    s.on = true; s.level = 255; s.effect_id = 8;
+    s.color_x = 41000; s.color_y = 21000;
+    s.palette_id = 0;
+    ee.render(cfg, &s, 1234, &fb);
+    var min_r: u16 = 300; var max_r: u16 = 0;
+    for (fb.linear) |p| {
+        if (p.r < min_r) min_r = p.r;
+        if (p.r > max_r) max_r = p.r;
+    }
+    try std.testing.expect(max_r - min_r > 20);
+}
+
+test "breathe smoothly ramps between adjacent frames" {
+    var fb = fbm.FrameBuffer(cfg){};
+    var s = st_mod.defaults;
+    s.on = true; s.level = 255; s.effect_id = 1; s.effect_speed = 128;
+    s.color_x = 41000; s.color_y = 21000;
+    var prev: i32 = -1;
+    var t: u64 = 0;
+    while (t < 4000) : (t += 16) {
+        ee.render(cfg, &s, t, &fb);
+        var sum: i32 = 0;
+        for (fb.linear) |p| sum += @as(i32, p.r) + p.g + p.b;
+        if (prev >= 0) {
+            const jump = @abs(sum - prev);
+            try std.testing.expect(jump < cfg.count * 20);
+        }
+        prev = sum;
+    }
+}

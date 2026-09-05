@@ -17,17 +17,35 @@ pub fn make(comptime cfg: config.LedConfig) ee.Effect(cfg) {
             };
             const speed = @as(u64, state.effect_speed) + 1;
             const phase: u32 = @intCast((t_ms * speed) % 65536);
+            const commanded = c.xyToRgb(state.color_x, state.color_y, 255);
             var y: u16 = 0;
             while (y < grid.h) : (y += 1) {
                 var x: u16 = 0;
                 while (x < grid.w) : (x += 1) {
-                    const px: i32 = @intCast(x);
-                    const py: i32 = @intCast(y);
-                    const noise: i32 = @intFromFloat(std.math.sin(@as(f32, @floatFromInt(px)) * 0.4 + @as(f32, @floatFromInt(phase)) / 4000.0) * 128.0);
-                    const noise2: i32 = @intFromFloat(std.math.sin(@as(f32, @floatFromInt(py)) * 0.4 - @as(f32, @floatFromInt(phase)) / 3000.0) * 128.0);
-                    const t: u16 = @intCast(@as(u32, @intCast(@abs(noise + noise2))) * 128);
-                    const commanded = c.xyToRgb(state.color_x, state.color_y, 255);
-                    fb.setXY(x, y, palette.sample(state.palette_id, t, commanded));
+                    const px: f32 = @floatFromInt(x);
+                    const py: f32 = @floatFromInt(y);
+                    const ph: f32 = @floatFromInt(phase);
+                    // Three sine waves at different frequencies produce a
+                    // richer plasma than two — extrema line up less often,
+                    // so the sample space of `t` covers the full palette
+                    // instead of clustering near the middle.
+                    const n1 = std.math.sin(px * 0.35 + ph / 3800.0);
+                    const n2 = std.math.sin(py * 0.35 - ph / 2900.0);
+                    const n3 = std.math.sin((px + py) * 0.22 + ph / 4700.0);
+                    const norm: f32 = (n1 + n2 + n3 + 3.0) / 6.0;
+                    const t: u16 = @intFromFloat(@round(norm * 65535.0));
+                    const px_color: c.Rgb = if (state.palette_id == 0) blk: {
+                        // Commanded-color plasma: spatial brightness swell.
+                        // Range [0.15, 1.0] keeps troughs visible at low
+                        // levels while preserving contrast.
+                        const bright: f32 = 0.15 + 0.85 * norm;
+                        break :blk .{
+                            .r = @intFromFloat(@round(@as(f32, @floatFromInt(commanded.r)) * bright)),
+                            .g = @intFromFloat(@round(@as(f32, @floatFromInt(commanded.g)) * bright)),
+                            .b = @intFromFloat(@round(@as(f32, @floatFromInt(commanded.b)) * bright)),
+                        };
+                    } else palette.sample(state.palette_id, t, commanded);
+                    fb.setXY(x, y, px_color);
                 }
             }
         }
